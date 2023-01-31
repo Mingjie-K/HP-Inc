@@ -48,7 +48,7 @@ data_type = {'TPO_PO_Vendor_Code': str, 'TPO_PO_Vendor_Name': str,
              'Trade_PO_Open_Qty_Value': float, 'Trade_PO_Status': str,
              'IC_SO_To_Factory_Sold_To_Name': str,
              'IC_SO_To_Factory_Ship_To_Name': str, 'DC_IC_PO_Plant': str,
-             'REGION': str, 'Sub_Region': str}
+             'REGION': str}
 
 dates = ['TPO_Created_On', 'TPO_Requested_Delivery_Date',
          'TPO_PR_Creation_Date', 'TPO_LA_Conf_Delivery_Date']
@@ -83,7 +83,8 @@ def read_past_csv(TYPE, mpa_str, date_in):
     for file in past_files:
         df = pd.read_csv(file,
                          dtype=data_type,
-                         parse_dates=date_in)
+                         parse_dates=date_in,
+                         converters={'Sub_Region':str})
         past_df = pd.concat([past_df,df],ignore_index=True)
     past_df['DC_IC_PO_Plant'] = past_df['DC_IC_PO_Plant'].fillna('')
     past_df['REGION'] = past_df['REGION'].fillna('')
@@ -1628,7 +1629,7 @@ def combine_ship_build(df, ship_df, hpps_bool, hpps_hw_str, canon_bool,ink_exe_b
                                  'DC_IC_PO_PLANT', 'SUB_REGION',
                                  'TPO_LA_CONF_DELIVERY_MONTH_POR',
                                  'MONTH_NUM_POR', 'ISO_POR',
-                                 ])['TPO_LA_QTY'].sum().reset_index()
+                                 ],dropna=False)['TPO_LA_QTY'].sum().reset_index()
 
     WR_Final['TPO_LA_CONF_DELIVERY_MONTH_POR'] = \
         WR_Final['TPO_LA_CONF_DELIVERY_MONTH_POR'].apply(pd.to_datetime)
@@ -1649,6 +1650,10 @@ def combine_ship_build(df, ship_df, hpps_bool, hpps_hw_str, canon_bool,ink_exe_b
         WR_Final = WR_Final.loc[WR_Final['Year'] == current_fy].copy()
         WR_Final = WR_Final.drop(columns=['Quarter','Year'])
         WR_Final['SHIP/POR'] = 'POR'
+        # ADDING LA AND NA & CHINA
+        WR_Final.loc[WR_Final['SUB_REGION'] == 'NA', 'REGION'] = 'NA'
+        WR_Final.loc[WR_Final['SUB_REGION'] == 'LA', 'REGION'] = 'LA'
+        WR_Final.loc[WR_Final['SKU'].str.contains('#AB2'), 'REGION'] = 'CHINA'
     else:
     # GET ONLY CURRENT MONTH AND PAST 3 MONTHS OF SHIPMENT DATA
         three_months_back = today.replace(day=1, hour=0, minute=0,
