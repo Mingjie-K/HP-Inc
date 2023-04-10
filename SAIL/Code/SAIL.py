@@ -1037,14 +1037,14 @@ ink_por_df = ink_por_df.drop(columns=['MPa', 'TPO_LA_CONF_DELIVERY_DATE_POR',
                                       'SKU'])
 # MERGE AND TAKE LATEST PLATFORM FROM SHIPMENT DATA
 # NOVELLI BASE YET1 CHANGE TO NOVELLI BASE PAAS (REPLACE)
-ink_por_df = ink_por_df.merge(Ink_POR_grouped, how='left', on='PART_NR')
+ink_por_df = ink_por_df.merge(Ink_POR_grouped, how='left', on=['LOC_FROM_NM','PART_NR'])
 ink_por_df.loc[
     (ink_por_df['PLTFRM_NM_x'] != ink_por_df['PLTFRM_NM_y']) &
     (ink_por_df['PLTFRM_NM_y'].notnull()), 'PLTFRM_NM_x'] = ink_por_df['PLTFRM_NM_y']
 
-ink_por_df = ink_por_df.drop(columns=['LOC_FROM_NM_y', 'PLTFRM_NM_y',
+ink_por_df = ink_por_df.drop(columns=['PLTFRM_NM_y',
                                       'BUS_UNIT_NM'])
-ink_por_df = ink_por_df.rename(columns={'LOC_FROM_NM_x': 'MPa',
+ink_por_df = ink_por_df.rename(columns={'LOC_FROM_NM': 'MPa',
                                         'BUS_UNIT_NM_x': 'BUS_UNIT_NM',
                                         'PLTFRM_NM_x': 'PLATFORM',
                                         'PART_NR': 'SKU'})
