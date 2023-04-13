@@ -25,6 +25,16 @@ laser_por_naming = {'HP FOXCONN PARDUBICE MFG(SG31)': 'Laser Foxconn Czech',
                     'HP Printing Shandong': 'Laser HPPS',
                     'FOXCONN WEIHAI': 'Laser Foxconn Weihai'}
 
+laser_short_naming = {'Laser Foxconn Czech':'FXN CZ',
+                      'Laser Foxconn Weihai':'FXN WH',
+                      'Laser Jabil Chihuahua':'JCUU',
+                      'Laser Jabil Weihai':'JWH'}
+
+canon_short_naming = {'Canon CN, Zhongshan':'Canon',
+                      'Canon JP':'Canon',
+                      'Canon PH':'Canon',
+                      'Canon VN':'Canon'}
+
 # %% MAP MPA & REGION / REPLACE MPA NAMING
 
 
@@ -1113,19 +1123,23 @@ def group_por(query_df):
         'FAMILY_NM', 'PLTFRM_NM', 'BUS_UNIT_NM', 'PART_NR'])['QTY'].sum().reset_index()
     return query_df
 
+def tv_pct(df):
+    df['% Shipped'] = df['TPO_LA_QTY'] / \
+        df['TPO_QTY']
+    df['% Shipped'] = df['% Shipped'].fillna(0)
+    # OVERWRITE MORE THAN 100% TO 100%
+    df.loc[df['% Shipped'] >= 1, '% Shipped'] = 1
+    # MEET TARGET
+    df.loc[df['% Shipped'] >= 0.9, 'Meet Target'] = 1
+    df.loc[df['% Shipped'] < 0.5, 'Meet Target'] = 2
+    df.loc[df['Meet Target'].isnull(),
+                       'Meet Target'] = 3
+    return df
+    
 def tv_fam_group(df):
     # INKJET OEM PRODUCTS WITHOUT CAT_SUB BUT WITH TV_FAMILY, DROP THEM
     cat_df_grouped = df.groupby([
-        'BU', 'TV_FAMILY', 'BUS_UNIT_NM',
+        'BU', 'MPA', 'PLTFRM_NM', 'TV_FAMILY', 'BUS_UNIT_NM',
         'CAT_NM', 'CAT_SUB'])[['TPO_QTY', 'TPO_LA_QTY']].sum().reset_index()
-    cat_df_grouped['% Shipped'] = cat_df_grouped['TPO_LA_QTY'] / \
-        cat_df_grouped['TPO_QTY']
-    cat_df_grouped['% Shipped'] = cat_df_grouped['% Shipped'].fillna(0)
-    # OVERWRITE MORE THAN 100% TO 100%
-    cat_df_grouped.loc[cat_df_grouped['% Shipped'] >= 1, '% Shipped'] = 1
-    # MEET TARGET
-    cat_df_grouped.loc[cat_df_grouped['% Shipped'] >= 0.9, 'Meet Target'] = 1
-    cat_df_grouped.loc[cat_df_grouped['% Shipped'] < 0.5, 'Meet Target'] = 2
-    cat_df_grouped.loc[cat_df_grouped['Meet Target'].isnull(),
-                       'Meet Target'] = 3
+    cat_df_grouped = tv_pct(cat_df_grouped)
     return cat_df_grouped

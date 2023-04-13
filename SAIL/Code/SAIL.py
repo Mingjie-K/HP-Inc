@@ -11,17 +11,20 @@ import numpy as np
 import glob
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-# import importlib
+import importlib
 
 import os
 user = os.getenv('USERPROFILE')
-project_func_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Code')
+# SharePoint Path
+# project_func_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Code')
+# Troubleshoot Path
+project_func_path = os.path.join(user, 'OneDrive - HP Inc\Projects\SAIL\Code')
 os.chdir(project_func_path)
 
 # Change directory to import neccessary module
 import business  # nopep8
 import function_map as fm  # nopep8
-# importlib.reload(fm)
+importlib.reload(fm)
 pd.set_option('display.max_columns', None)
 
 # GET ALL DATES
@@ -1356,6 +1359,11 @@ por_ship_df = por_ship_df.loc[
     ~por_ship_df['PLTFRM_NM'].str.contains('ACCESSOR|AV-|UNKNOWN')].copy()
 
 # =============================================================================
+# OVERWRITE CANON FACTORIES TO OVERALL CANON
+# =============================================================================
+por_ship_df['MPA'] = por_ship_df['MPA'].replace(fm.canon_short_naming)
+
+# =============================================================================
 # MTD DATA
 # =============================================================================
 mtd_por_ship_df = por_ship_df.loc[
@@ -1383,6 +1391,22 @@ qtd_por_ship_df = por_ship_df.loc[
 # =============================================================================
 ink_cat_df_grouped = fm.tv_fam_group(mtd_ink_por_ship_df)
 laser_cat_df_grouped = fm.tv_fam_group(mtd_laser_por_ship_df)
+
+# =============================================================================
+# FACTORY ALERT (CURRENT MONTH) LASER
+# =============================================================================
+laser_alert = laser_cat_df_grouped.groupby(
+    ['MPA','TV_FAMILY'])[['TPO_QTY','TPO_LA_QTY']].sum().reset_index()
+laser_alert = fm.tv_pct(laser_alert)
+# GET ONLY THOSE FAMILY THAT NEEDS ALERT
+laser_alert = laser_alert.loc[laser_alert['Meet Target'] == 2].copy()
+laser_alert['MPA'] = laser_alert['MPA'].replace(fm.laser_short_naming)
+# GROUP BY FAMILY AND GIVE ALERT
+alert_grouped = laser_alert.groupby(
+    'TV_FAMILY')['MPA'].apply(lambda x: ', '.join(x)).reset_index() \
+    .rename(columns={'MPA':'MPA_AFFECTED'})
+laser_cat_df_grouped = laser_cat_df_grouped.merge(
+    alert_grouped, how='left', on='TV_FAMILY')
 
 # %% PARQUET
 
