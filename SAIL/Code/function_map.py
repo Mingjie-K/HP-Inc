@@ -915,6 +915,26 @@ def combine_po_ship(po_df, ship_df, today_date, fy_quarter):
 
     return po_ship_df
 
+# %% PO THAT ARE OPEN AND NOT DONE DEAL
+
+def remain_po(po_df, ship_df, cur_month):
+    shipped = ship_df.groupby([
+        'TPO_PO_Vendor_Name','Trade_PO','PART_NR'],dropna=False) \
+        ['TPO_LA_Qty'].sum().reset_index()
+    shipped = po_df.merge(shipped,how='left',
+                          on=['TPO_PO_Vendor_Name','Trade_PO','PART_NR'])
+    shipped['TPO_LA_Qty'] = shipped['TPO_LA_Qty'].fillna(0)
+    shipped['REMAINING_PO_QTY'] = shipped['TPO_Qty'] - shipped['TPO_LA_Qty']
+    
+    shipped = shipped.loc[
+        (shipped['REMAINING_PO_QTY'] != 0)  &  
+        (shipped['TPO_Requested_Delivery_Month_POR'] == cur_month)].copy()
+    shipped = shipped.rename(columns={'TPO_PO_Vendor_Name':'MPA',
+                                      'PART_NR':'SKU'})
+    shipped.columns = shipped.columns.str.upper()
+    return shipped
+
+
 # %% SHIPMENT WITH POR
 
 

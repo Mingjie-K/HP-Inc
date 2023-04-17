@@ -1040,7 +1040,8 @@ ink_por_df = ink_por_df.drop(columns=['MPa', 'TPO_LA_CONF_DELIVERY_DATE_POR',
                                       'SKU'])
 # MERGE AND TAKE LATEST PLATFORM FROM SHIPMENT DATA
 # NOVELLI BASE YET1 CHANGE TO NOVELLI BASE PAAS (REPLACE)
-ink_por_df = ink_por_df.merge(Ink_POR_grouped, how='left', on=['LOC_FROM_NM','PART_NR'])
+ink_por_df = ink_por_df.merge(Ink_POR_grouped, how='left', on=[
+                              'LOC_FROM_NM', 'PART_NR'])
 ink_por_df.loc[
     (ink_por_df['PLTFRM_NM_x'] != ink_por_df['PLTFRM_NM_y']) &
     (ink_por_df['PLTFRM_NM_y'].notnull()), 'PLTFRM_NM_x'] = ink_por_df['PLTFRM_NM_y']
@@ -1363,6 +1364,19 @@ por_ship_df = por_ship_df.loc[
 # =============================================================================
 por_ship_df['MPA'] = por_ship_df['MPA'].replace(fm.canon_short_naming)
 
+# DROP PART_NR COLUMN
+por_ship_df = por_ship_df.drop(columns=['PART_NR'])
+
+# =============================================================================
+# ADD COMBINED COLUMN FOR RELATIONSHIP
+# =============================================================================
+por_ship_df = fm.combine_cols(por_ship_df,
+                              ['BU',
+                               'BUS_UNIT_NM',
+                               'CAT_NM',
+                               'CAT_SUB', 'MPA', 'REGION',
+                               'TV_FAMILY', 'PLTFRM_NM', 'SKU'],
+                              'COMBINED')
 # =============================================================================
 # MTD DATA
 # =============================================================================
@@ -1396,7 +1410,7 @@ laser_cat_df_grouped = fm.tv_fam_group(mtd_laser_por_ship_df)
 # FACTORY ALERT (CURRENT MONTH) LASER
 # =============================================================================
 laser_alert = laser_cat_df_grouped.groupby(
-    ['MPA','TV_FAMILY'])[['TPO_QTY','TPO_LA_QTY']].sum().reset_index()
+    ['MPA', 'TV_FAMILY'])[['TPO_QTY', 'TPO_LA_QTY']].sum().reset_index()
 laser_alert = fm.tv_pct(laser_alert)
 # GET ONLY THOSE FAMILY THAT NEEDS ALERT
 laser_alert = laser_alert.loc[laser_alert['Meet Target'] == 2].copy()
@@ -1404,9 +1418,113 @@ laser_alert['MPA'] = laser_alert['MPA'].replace(fm.laser_short_naming)
 # GROUP BY FAMILY AND GIVE ALERT
 alert_grouped = laser_alert.groupby(
     'TV_FAMILY')['MPA'].apply(lambda x: ', '.join(x)).reset_index() \
-    .rename(columns={'MPA':'MPA_AFFECTED'})
+    .rename(columns={'MPA': 'MPA_AFFECTED'})
 laser_cat_df_grouped = laser_cat_df_grouped.merge(
     alert_grouped, how='left', on='TV_FAMILY')
+
+# %% PO THAT ARE OPEN AND NOT DONE DEAL
+ink_shipped = fm.remain_po(ink_po_exe_df, ink_ship_exe_df, current_mon_month)
+laser_shipped = fm.remain_po(laser_po_df, laser_ship_df, current_mon_month)
+fxnwhl_shipped = fm.remain_po(fxnwhl_po_df, fxnwhl_ship_df, current_mon_month)
+# ADD CATEGORY AND GET HW FOR FXNWHL
+fxnwhl_shipped = fxnwhl_shipped.merge(fxnwhl_sku_cat, how='left', on='SKU')
+fxnwhl_shipped = fxnwhl_shipped.loc[
+    fxnwhl_shipped['CATEGORY'] == 'Laser FXNWH HW'].copy()
+canon_shipped = fm.remain_po(canon_po_df, canon_ship_df, current_mon_month)
+# Overwrite CANON MPA
+canon_shipped['MPA'] = 'Canon'
+remain_po_df = pd.concat([ink_shipped, laser_shipped, fxnwhl_shipped,
+                          canon_shipped], ignore_index=True)
+
+remain_po_df = remain_po_df.merge(plan_cat_df,
+                                  how='left',
+                                  left_on='SKU',
+                                  right_on='PART_NR')
+
+# =============================================================================
+# OVERWRITE CATEGORIZATION FOR INKJET
+# =============================================================================
+remain_po_df.loc[
+    (remain_po_df['CAT_SUB'].str.contains('Oj pro', na=False, case=False)) &
+    (remain_po_df['BU'] == 'Inkjet'),
+    'CAT_SUB'] = 'OJ PRO'
+
+# OVERWRITE FOR RUBY TOPAZ
+remain_po_df.loc[
+    (remain_po_df['PLTFRM_NM'].str.contains('ruby|topaz', na=False, case=False)) &
+    (remain_po_df['BU'] == 'Inkjet'),
+    'CAT_SUB'] = 'MOBILE'
+
+# OVERWRITE FOR OEM
+remain_po_df.loc[
+    (remain_po_df['PLTFRM_NM'].str.contains('OEM', na=False, case=False)) &
+    (remain_po_df['BU'] == 'Inkjet'),
+    'CAT_SUB'] = 'OEM'
+
+remain_po_df.loc[
+    (remain_po_df['PLTFRM_NM'].str.contains('OEM', na=False, case=False)) &
+    (remain_po_df['BU'] == 'Inkjet'),
+    'CAT_NM'] = 'OEM'
+
+# =============================================================================
+# REMOVE THOSE WITH NO CATEGORIZATION AS THEY ARE ACCESSORIES AND OEM
+# =============================================================================
+remain_po_df = remain_po_df.loc[remain_po_df['CAT_SUB'].notnull()].copy()
+
+# =============================================================================
+# REMOVE CAT_SUB WITH EOL
+# =============================================================================
+remain_po_df = remain_po_df.loc[~(
+    remain_po_df['CAT_SUB'].str.contains('EOL'))].copy()
+
+# ADD TV FAMILY MAPPING
+for bu, plt, fam in zip(tv_family_map['BU'], tv_family_map['PLTFRM_NM'],
+                        tv_family_map['TV_FAMILY']):
+    remain_po_df.loc[
+        (remain_po_df['BU'] == bu) &
+        (remain_po_df['PLTFRM_NM'].str.contains(
+            base.format(''.join(expr.format(plt))))),
+        'TV_FAMILY'] = fam
+
+# =============================================================================
+# REMOVE PLATFORM ACCESSORIES, AV- AND UNKNOWN FROM DATA
+# =============================================================================
+remain_po_df = remain_po_df.loc[
+    ~remain_po_df['PLTFRM_NM'].str.contains('ACCESSOR|AV-|UNKNOWN')].copy()
+
+# DROP PART_NR COLUMN
+remain_po_df = remain_po_df.drop(columns=['PART_NR', 'CATEGORY'])
+
+# =============================================================================
+# ADD COMBINED COLUMN FOR RELATIONSHIP
+# =============================================================================
+remain_po_df = fm.combine_cols(remain_po_df,
+                               ['BU',
+                                'BUS_UNIT_NM',
+                                'CAT_NM',
+                                'CAT_SUB', 'MPA', 'REGION',
+                                'TV_FAMILY', 'PLTFRM_NM', 'SKU'],
+                               'COMBINED')
+remain_rel = remain_po_df[['BU', 'BUS_UNIT_NM', 'CAT_NM', 'CAT_SUB',
+                           'MPA', 'REGION', 'TV_FAMILY', 'PLTFRM_NM',
+                           'SKU', 'COMBINED']].copy()
+por_ship_rel = por_ship_df[['BU', 'BUS_UNIT_NM', 'CAT_NM', 'CAT_SUB',
+                           'MPA', 'REGION', 'TV_FAMILY', 'PLTFRM_NM',
+                            'SKU', 'COMBINED']].copy()
+por_ship_tpo_rel = pd.concat([remain_rel, por_ship_rel], ignore_index=True)
+
+por_bu_slice_df = fm.unique_table(por_ship_tpo_rel, ['BU', 'COMBINED'])
+por_bus_slice_df = fm.unique_table(
+    por_ship_tpo_rel, ['BUS_UNIT_NM', 'COMBINED'])
+por_catnm_slice_df = fm.unique_table(por_ship_tpo_rel, ['CAT_NM', 'COMBINED'])
+por_catsub_slice_df = fm.unique_table(
+    por_ship_tpo_rel, ['CAT_SUB', 'COMBINED'])
+por_mpa_slice_df = fm.unique_table(por_ship_tpo_rel, ['MPA', 'COMBINED'])
+por_region_slice_df = fm.unique_table(por_ship_tpo_rel, ['REGION', 'COMBINED'])
+por_tv_slice_df = fm.unique_table(por_ship_tpo_rel, ['TV_FAMILY', 'COMBINED'])
+por_plt_slice_df = fm.unique_table(por_ship_tpo_rel, ['PLTFRM_NM', 'COMBINED'])
+por_sku_slice_df = fm.unique_table(por_ship_tpo_rel, ['SKU', 'COMBINED'])
+
 
 # %% PARQUET
 
@@ -1460,9 +1578,15 @@ ink_exe_file_names = ['month_slice', 'unique_month', 'quarter_unique',
 
 # TV EXECUTIVE REPORT NAMES
 tv_names = [mtd_ink_por_ship_df, ink_cat_df_grouped, mtd_laser_por_ship_df,
-            laser_cat_df_grouped, por_ship_df, qtd_por_ship_df]
+            laser_cat_df_grouped, por_ship_df, qtd_por_ship_df, remain_po_df,
+            por_bu_slice_df, por_bus_slice_df, por_catnm_slice_df,
+            por_catsub_slice_df, por_mpa_slice_df, por_region_slice_df,
+            por_tv_slice_df, por_plt_slice_df, por_sku_slice_df]
 tv_file_names = ['Inkjet_Current_Mth', 'Inkjet_CAT', 'Laser_Current_Mth',
-                 'Laser_CAT', 'POR_SHIP_TPO', 'QTD_POR_SHIP_TPO']
+                 'Laser_CAT', 'POR_SHIP_TPO', 'QTD_POR_SHIP_TPO', 'Remain_PO',
+                 'por_bu_slice', 'por_bus_slice', 'por_catnm_slice',
+                 'por_catsub_slice', 'por_mpa_slice', 'por_region_slice',
+                 'por_tv_slice', 'por_plt_slice', 'por_sku_slice']
 
 # SHIPMENT
 output_pq('Shipment', TPO_Final, 'Shipment')
