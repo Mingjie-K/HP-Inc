@@ -18,7 +18,7 @@ user = os.getenv('USERPROFILE')
 # SharePoint Path
 # project_func_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Code')
 # Troubleshoot Path
-project_func_path = os.path.join(user, 'OneDrive - HP Inc\Projects\SAIL\Code')
+project_func_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput')
 os.chdir(project_func_path)
 
 # Change directory to import neccessary module
@@ -1637,7 +1637,8 @@ print('Code has completed running, Time taken {:.2f} minutes'.format(td))
 
 os.chdir(project_func_path)
 with open("Runtime.txt", "a") as f:
-    f.write('\n' + str(today.date()) + '\t {:.2f} minutes'.format(td))
+    f.write('\n' + str(today.date()) + '\t {:.2f} minutes'.format(td) + '\t' \
+            + datetime.now().strftime('%H:%M:%S'))
 # CHECKING
 # df_parquet = pd.read_parquet('Shipment.parquet')
 # df_parquet.head()
