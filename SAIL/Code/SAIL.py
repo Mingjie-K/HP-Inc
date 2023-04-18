@@ -16,9 +16,9 @@ import importlib
 import os
 user = os.getenv('USERPROFILE')
 # SharePoint Path
-# project_func_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Code')
+project_func_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Code')
 # Troubleshoot Path
-project_func_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput')
+# project_func_path = os.path.join(user, 'OneDrive - HP Inc\Projects\SAIL\Code')
 os.chdir(project_func_path)
 
 # Change directory to import neccessary module
@@ -201,6 +201,21 @@ def read_week_build(user, folder):
         df = pd.read_csv(file, parse_dates=['CAL_WK_DT'])
         por_df = pd.concat([por_df, df], ignore_index=True)
     return por_df
+
+# %% Functions to export data
+
+def output_pq(Type, df, file_name):
+    path_dir = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
+                            'PARQUET', Type)
+    os.chdir(path_dir)
+    df.to_parquet(file_name + '.parquet', engine='pyarrow', index=False)
+
+
+def output_csv(Type, df, file_name):
+    path_dir = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
+                            'CSV', Type)
+    os.chdir(path_dir)
+    df.to_csv(file_name + '.csv', index=False)
 
 # %% Business User Filtering Excel File
 
@@ -1362,10 +1377,15 @@ por_ship_df = por_ship_df.loc[
 # =============================================================================
 # OVERWRITE CANON FACTORIES TO OVERALL CANON
 # =============================================================================
-por_ship_df['MPA'] = por_ship_df['MPA'].replace(fm.canon_short_naming)
 
 # DROP PART_NR COLUMN
 por_ship_df = por_ship_df.drop(columns=['PART_NR'])
+
+# OUTPUT FIRST FOR MAP AS OVERWRITE WILL DELETE COORDINATES
+output_csv('Executive', por_ship_df, 'POR_SHIP_TPO')
+output_pq('Executive', por_ship_df, 'POR_SHIP_TPO')
+
+por_ship_df['MPA'] = por_ship_df['MPA'].replace(fm.canon_short_naming)
 
 # =============================================================================
 # ADD COMBINED COLUMN FOR RELATIONSHIP
@@ -1532,21 +1552,6 @@ ink_month['QUARTER'] = ink_month['QUARTER'].astype(str)
 WR_INK_EXE['QUARTER'] = WR_INK_EXE['QUARTER'].astype(str)
 laser_month['QUARTER'] = laser_month['QUARTER'].astype(str)
 
-
-def output_pq(Type, df, file_name):
-    path_dir = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
-                            'PARQUET', Type)
-    os.chdir(path_dir)
-    df.to_parquet(file_name + '.parquet', engine='pyarrow', index=False)
-
-
-def output_csv(Type, df, file_name):
-    path_dir = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
-                            'CSV', Type)
-    os.chdir(path_dir)
-    df.to_csv(file_name + '.csv', index=False)
-
-
 # MPA PERFORMANCE NAMES
 mpa_per_df_names = [month_slice, unique_month, quarter_unique, fy_unique,
                     q_slice, fy_slice, ink_mpa_slice_df, ink_region_slice_df,
@@ -1583,7 +1588,7 @@ tv_names = [mtd_ink_por_ship_df, ink_cat_df_grouped, mtd_laser_por_ship_df,
             por_catsub_slice_df, por_mpa_slice_df, por_region_slice_df,
             por_tv_slice_df, por_plt_slice_df, por_sku_slice_df]
 tv_file_names = ['Inkjet_Current_Mth', 'Inkjet_CAT', 'Laser_Current_Mth',
-                 'Laser_CAT', 'POR_SHIP_TPO', 'QTD_POR_SHIP_TPO', 'Remain_PO',
+                 'Laser_CAT', 'W_POR_SHIP_TPO', 'QTD_POR_SHIP_TPO', 'Remain_PO',
                  'por_bu_slice', 'por_bus_slice', 'por_catnm_slice',
                  'por_catsub_slice', 'por_mpa_slice', 'por_region_slice',
                  'por_tv_slice', 'por_plt_slice', 'por_sku_slice']
