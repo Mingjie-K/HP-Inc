@@ -16,7 +16,8 @@ import importlib
 import os
 user = os.getenv('USERPROFILE')
 # SharePoint Path
-project_func_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Code')
+project_func_path = os.path.join(
+    user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Code')
 # Troubleshoot Path
 # project_func_path = os.path.join(user, 'OneDrive - HP Inc\Projects\SAIL\Code')
 os.chdir(project_func_path)
@@ -203,6 +204,7 @@ def read_week_build(user, folder):
     return por_df
 
 # %% Functions to export data
+
 
 def output_pq(Type, df, file_name):
     path_dir = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
@@ -922,10 +924,14 @@ WR_LASER_FINAL = pd.concat([WR_LASER_EXE, WR_FXNWHL_EXE, WR_CANON_EXE],
                            ignore_index=True)
 WR_LASER_FINAL.columns = WR_LASER_FINAL.columns.str.upper()
 WR_LASER_FINAL.loc[WR_LASER_FINAL['FAMILY'].isnull(), 'FAMILY'] = ''
-WR_LASER_FINAL = fm.combine_cols(WR_LASER_FINAL,
-                                 ['BU', 'MPA', 'REGION', 'FAMILY', 'PLTFRM_NM'],
-                                 'COMBINED')
+WR_LASER_FINAL = fm.convert_fy(WR_LASER_FINAL, 'QUARTER',
+                               'TPO_REQUESTED_DELIVERY_MONTH_POR',
+                               'Q-OCT', 'QUARTER_YEAR')
 
+WR_LASER_FINAL['QUARTER_NAME'] = WR_LASER_FINAL['QUARTER'].astype(str)
+WR_LASER_FINAL['QUARTER_NAME'] = 'F' + WR_LASER_FINAL['QUARTER_NAME'].str[-2:] + \
+    """'""" + WR_LASER_FINAL['QUARTER_NAME'].str[2:4]
+WR_LASER_FINAL['FY_NAME'] = 'ALL - FY' + WR_LASER_FINAL['QUARTER_YEAR']
 
 # =============================================================================
 # FOR INKJET EXECUTIVE
@@ -944,6 +950,12 @@ WR_INK_EXE['QUARTER_NAME'] = WR_INK_EXE['QUARTER'].astype(str)
 WR_INK_EXE['QUARTER_NAME'] = 'F' + WR_INK_EXE['QUARTER_NAME'].str[-2:] + \
     """'""" + WR_INK_EXE['QUARTER_NAME'].str[2:4]
 WR_INK_EXE['FY_NAME'] = 'ALL - FY' + WR_INK_EXE['QUARTER_YEAR']
+# COMBINED PORWSHIP FOR INK & LASER FOR EXECUTIVE
+COMBINED_PORWSHIP = pd.concat([WR_INK_EXE, WR_LASER_FINAL], ignore_index=True)
+COMBINED_PORWSHIP = fm.combine_cols(COMBINED_PORWSHIP,
+                                    ['BU', 'MPA', 'REGION', 'FAMILY', 'PLTFRM_NM'],
+                                    'COMBINED')
+
 WR_INK_EXE['TYPE'] = 'POR'
 cols = ['MPA', 'REGION', 'PLTFRM_NM', 'FAMILY', 'SKU', 'TYPE']
 WR_INK_EXE['COMBINED'] = WR_INK_EXE[cols] \
@@ -1150,6 +1162,15 @@ laser_tv = fm.combine_cols(laser_tv, ['BU', 'MPA', 'REGION', 'FAMILY', 'PLTFRM_N
 ink_tv = fm.combine_cols(ink_tv, ['BU', 'MPA', 'REGION', 'FAMILY', 'PLTFRM_NM'],
                          'COMBINED')
 all_tv = pd.concat([ink_tv, laser_tv], ignore_index=True)
+
+all_tv_rel = fm.unique_table(all_tv,
+                             ['BU', 'MPA', 'REGION', 'FAMILY', 'PLTFRM_NM', 'COMBINED'])
+COMBINED_PORWSHIP_rel = fm.unique_table(all_tv,
+                                        ['BU', 'MPA', 'REGION', 'FAMILY', 'PLTFRM_NM', 'COMBINED'])
+Combined_Relationship = pd.concat([all_tv_rel, COMBINED_PORWSHIP_rel],
+                                  ignore_index=True)
+Combined_Relationship = fm.unique_table(Combined_Relationship,
+                                        ['BU', 'MPA', 'REGION', 'FAMILY', 'PLTFRM_NM', 'COMBINED'])
 # =============================================================================
 # POR ROLLUP
 # =============================================================================
@@ -1581,17 +1602,20 @@ ink_exe_file_names = ['month_slice', 'unique_month', 'quarter_unique',
                       'ink_plt_slice_df', 'ink_fam_slice_df',
                       'ink_sku_slice_df', 'ink_month']
 
-# TV EXECUTIVE REPORT NAMES
+# TV EXECUTIVE REPORT NAMES AND EXECUTIVE REPORT
 tv_names = [mtd_ink_por_ship_df, ink_cat_df_grouped, mtd_laser_por_ship_df,
             laser_cat_df_grouped, por_ship_df, qtd_por_ship_df, remain_po_df,
             por_bu_slice_df, por_bus_slice_df, por_catnm_slice_df,
             por_catsub_slice_df, por_mpa_slice_df, por_region_slice_df,
-            por_tv_slice_df, por_plt_slice_df, por_sku_slice_df]
+            por_tv_slice_df, por_plt_slice_df, por_sku_slice_df,
+            title_df, all_tv, Combined_Relationship, COMBINED_PORWSHIP]
 tv_file_names = ['Inkjet_Current_Mth', 'Inkjet_CAT', 'Laser_Current_Mth',
                  'Laser_CAT', 'W_POR_SHIP_TPO', 'QTD_POR_SHIP_TPO', 'Remain_PO',
                  'por_bu_slice', 'por_bus_slice', 'por_catnm_slice',
                  'por_catsub_slice', 'por_mpa_slice', 'por_region_slice',
-                 'por_tv_slice', 'por_plt_slice', 'por_sku_slice']
+                 'por_tv_slice', 'por_plt_slice', 'por_sku_slice',
+                 'Combined Title', 'Combined Data', 'Combined Relationship',
+                 'Combined PorwShip']
 
 # SHIPMENT
 output_pq('Shipment', TPO_Final, 'Shipment')
@@ -1642,7 +1666,7 @@ print('Code has completed running, Time taken {:.2f} minutes'.format(td))
 
 os.chdir(project_func_path)
 with open("Runtime.txt", "a") as f:
-    f.write('\n' + str(today.date()) + '\t {:.2f} minutes'.format(td) + '\t' \
+    f.write('\n' + str(today.date()) + '\t {:.2f} minutes'.format(td) + '\t'
             + datetime.now().strftime('%H:%M:%S'))
 # CHECKING
 # df_parquet = pd.read_parquet('Shipment.parquet')
