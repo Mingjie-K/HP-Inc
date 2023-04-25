@@ -837,7 +837,7 @@ fy_unique_exe = fm.create_unique_col(ink_month_exe,
 
 # %% SHIPMENT WITH POR
 
-inkjet_b_list = ['NKG TH', 'NKG YY', 'FXN CQ', 'JWH INK', 'FXN WH INK']
+inkjet_b_list = ['NKG TH', 'NKG YY', 'JWH INK', 'FXN WH INK']
 
 ink_build_df = pd.DataFrame()
 for mpa in inkjet_b_list:
