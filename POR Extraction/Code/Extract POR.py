@@ -19,21 +19,9 @@ por_master_path = os.path.join(user, 'HP Inc\PrintOpsDB - DBxlsxPOR\ISAAC')
 
 os.chdir(por_master_path)
 
-file_name = 'Output_Final_ISAAC - EXTENDED_USER.xlsx'
+file_name = 'Output_Final_ISAAC - EXTENDED_USER - SQL.xlsx'
 
 por_file = os.path.join(por_master_path, file_name)
-
-# REFRESH FILE
-# xlapp = win32com.client.DispatchEx('Excel.Application')
-# xlapp.Visible = True
-# wb = xlapp.Workbooks.Open(por_file)
-
-# wb.RefreshAll()
-
-# xlapp.CalculateUntilAsyncQueriesDone()
-# wb.Save()
-# time.sleep(10)
-# xlapp.Quit()
 
 
 def refresh(file):
@@ -75,15 +63,6 @@ def build_out_path(mpa_str):
                         mpa_str)
     return path
 
-# =============================================================================
-# Set BUS_UNIT_CATEGORIZATION Output Directory
-# =============================================================================
-
-
-# def bus_out_path(bu):
-#     path = os.path.join(user, 'HP Inc\PrintOpsDB - DBxlsxPOR\Data\BUS_UNIT CATEGORIZATION',
-#                         bu)
-#     return path
 
 # =============================================================================
 # Set Inkjet Weekly Build Plan Output Directory
@@ -129,9 +108,6 @@ nkgth_b_output_wk = ink_wk_build_out_path('NKG TH')
 nkgyy_b_output_wk = ink_wk_build_out_path('NKG YY')
 fxnwhi_b_output_wk = ink_wk_build_out_path('FXN WH INK')
 
-# %% INKJET BUS_UNIT Output Directory
-# inkjet_bus_output = bus_out_path('Inkjet')
-
 # %% LASER POR Output Directory
 fxn_cz_output = por_out_path('FXN CZ')
 jcuu_output = por_out_path('JABIL CUU')
@@ -146,7 +122,6 @@ fxnwhl_output = por_out_path('FXN WH LASER')
 fxn_cz_b_output = build_out_path('FXN CZ')
 jcuu_b_output = build_out_path('JABIL CUU')
 jwhl_b_output = build_out_path('JWH LASER')
-# canon_ffgi_b_output = build_out_path('CANON\CANON FFGI')
 fxnwhl_b_output = build_out_path('FXN WH LASER')
 # CANON
 canon_zs_b_output = build_out_path('CANON\CANON FFGI\ZS')
@@ -272,17 +247,10 @@ def extract_mpa_build(df, today_date, mpa, canon):
     find_por = find_por.loc[find_por['QTY'] != 0].copy()
     return find_por, current_week
 
-# %% Read BUS_UNIT CATEGORIZATION Data
-
-# def read_bus_data(filename, sheet, skip, cat):
-#     df = pd.read_excel(filename,
-#                        sheet_name=sheet,
-#                        dtype={'LOC_FROM_NM': str,
-#                               'PLTFRM_NM': str,
-#                               'PART_NR': str},
-#                        skiprows=skip)
-#     df['CATEGORY_BUS'] = cat
-#     return df
+# %% READ INKJET OFFICIAL WEEK FOR POR
+official_porwk = pd.read_excel(file_name, sheet_name='INKJET OFFICIAL POR WK',
+                               skiprows=6, usecols='A')
+latest_official = official_porwk.iloc[-1:]['CYCLE_WK_NM'].item()
 
 # %% READ PLANNING CATEGORIZATION DATA
 
@@ -301,14 +269,6 @@ def read_plan_category(filename, sheet, skip):
     df = df.drop_duplicates(
         subset=['PART_NR'], keep='first')
     df = df.drop(columns=['nunique'])
-    # current_week = today.strftime('%Y-W%V')
-    # find_cat = df.loc[(df['CYCLE_WK_NM'] == current_week)].copy()
-    # week_num = 1
-    # while (len(find_cat) == 0):
-    #     get_date = today_date - relativedelta(weeks=week_num)
-    #     get_week = get_date.isocalendar()[1]
-    #     current_week = today_date.strftime('%Y-W'+f'{get_week:02}')
-    #     find_cat = df.loc[(df['CYCLE_WK_NM'] == current_week)].copy()
     return df
 
 # %% LASER LATEST BUILD PLAN
@@ -333,25 +293,10 @@ canon_ph_build, canon_ph_b_wk = extract_mpa_build(
 canon_jp_build, canon_jp_b_wk = extract_mpa_build(
     canon_jp_build, today, None, True)
 
-# %% INKJET LATEST BUILD PLAN
-ink_build = read_build_data(file_name, 'INKJET BUILD PLAN', 6)
-# fxn_cq_build, fxn_cq_b_wk = extract_mpa_build(
-#     ink_build, today, 'Foxconn ChongQing', False)
-nkgth_build, nkgth_b_wk = extract_mpa_build(
-    ink_build, today, 'NKG Thailand', False)
-nkgyy_build, nkgyy_b_wk = extract_mpa_build(
-    ink_build, today, 'NKG Yue Yang', False)
-jwhi_build, jwhi_b_wk = extract_mpa_build(
-    ink_build, today, 'JABIL WEIHAI', False)
-# fptp_build, fptp_b_wk = extract_mpa_build(
-#     ink_build, today, 'Flex PTP Malaysia', False)
-fxnwhi_build, fxnwhi_b_wk = extract_mpa_build(
-    ink_build, today, 'FOXCONN WEIHAI', False)
-# fzh_build, fzh_b_wk = extract_mpa_build(ink_build, today, 'Flex Zhuhai')
 # %% INKJET LATEST WEEKLY BUILD PLAN
 ink_wk_build = read_build_data(file_name, 'INKJET BUILD PLAN WEEKLY', 5)
-fxn_cq_build_wk, fxn_cq_b_wk_wk = extract_mpa_build(
-    ink_wk_build, today, 'Foxconn ChongQing', False)
+# fxn_cq_build_wk, fxn_cq_b_wk_wk = extract_mpa_build(
+#     ink_wk_build, today, 'Foxconn ChongQing', False)
 nkgth_build_wk, nkgth_b_wk_wk = extract_mpa_build(
     ink_wk_build, today, 'NKG Thailand', False)
 nkgyy_build_wk, nkgyy_b_wk_wk = extract_mpa_build(
@@ -388,11 +333,6 @@ jcuu_por, jcuu_wk = extract_mpa_por(fxncz_jcuu_por, today, 'JABIL CHIHUAHUA')
 fxnwhl_por, fxnwhl_wk = extract_mpa_por(fxnwhl_por, today, 'FOXCONN WEIHAI')
 canon_ffgi_por, canon_wk = extract_canon_por(canon_ffgi_por, today)
 canon_engine_por, canon_eng_wk = extract_canon_por(canon_engine_por, today)
-# %% INKJET BUS_UNIT CATEGORIZATION (OLD)
-# ink_ops = read_bus_data(file_name, 'INKJET OPS', 3, 'OPS')
-# ink_hps = read_bus_data(file_name, 'INKJET HPS', 3, 'HPS')
-# ink_ciss = read_bus_data(file_name, 'INKJET CISS', 3, 'CISS')
-# ink_category = pd.concat([ink_ops, ink_hps, ink_ciss], ignore_index=True)
 
 # %% PLANNING CATEGORY CATEGORIZATION
 plan_cat_df = read_plan_category(file_name, 'PLANNING CATEGORIZATION', 0)
@@ -440,21 +380,24 @@ output_csv(fxnwhl_output, fxnwhl_por, fxnwhl_wk)
 output_csv(canon_ffgi_output, canon_ffgi_por, canon_wk)
 output_csv(canon_engine_output, canon_engine_por, canon_eng_wk)
 
-# INKJET BUILD PLAN
-# output_csv(fxn_cq_b_output, fxn_cq_build, fxn_cq_b_wk)
-output_csv(nkgth_b_output, nkgth_build, nkgth_b_wk)
-output_csv(nkgyy_b_output, nkgyy_build, nkgyy_b_wk)
-output_csv(jwhi_b_output, jwhi_build, jwhi_b_wk)
-output_csv(fxnwhi_b_output, fxnwhi_build, fxnwhi_b_wk)
-# output_csv(fptp_b_output, fptp_build, fptp_b_wk)
-# output_csv(fzh_b_output, fzh_build, fzh_b_wk)
-
 # INKJET WEEKLY BUILD PLAN
+official_bool = nkgth_build_wk['CYCLE_WK_NM'].str.contains(
+    latest_official).unique().item()
 # output_csv(fxn_cq_b_output_wk, fxn_cq_build_wk, fxn_cq_b_wk_wk)
-output_csv(nkgth_b_output_wk, nkgth_build_wk, nkgth_b_wk_wk)
-output_csv(nkgyy_b_output_wk, nkgyy_build_wk, nkgyy_b_wk_wk)
-output_csv(jwhi_b_output_wk, jwhi_build_wk, jwhi_b_wk_wk)
-output_csv(fxnwhi_b_output_wk, fxnwhi_build_wk, fxnwhi_b_wk_wk)
+if official_bool:
+    output_csv(nkgth_b_output_wk, nkgth_build_wk, nkgth_b_wk_wk)
+    output_csv(nkgyy_b_output_wk, nkgyy_build_wk, nkgyy_b_wk_wk)
+    output_csv(jwhi_b_output_wk, jwhi_build_wk, jwhi_b_wk_wk)
+    output_csv(fxnwhi_b_output_wk, fxnwhi_build_wk, fxnwhi_b_wk_wk)
+    output_csv(nkgth_b_output, nkgth_build_wk, nkgth_b_wk_wk)
+    output_csv(nkgyy_b_output, nkgyy_build_wk, nkgyy_b_wk_wk)
+    output_csv(jwhi_b_output, jwhi_build_wk, jwhi_b_wk_wk)
+    output_csv(fxnwhi_b_output, fxnwhi_build_wk, fxnwhi_b_wk_wk)
+else:
+    output_csv(nkgth_b_output_wk, nkgth_build_wk, nkgth_b_wk_wk)
+    output_csv(nkgyy_b_output_wk, nkgyy_build_wk, nkgyy_b_wk_wk)
+    output_csv(jwhi_b_output_wk, jwhi_build_wk, jwhi_b_wk_wk)
+    output_csv(fxnwhi_b_output_wk, fxnwhi_build_wk, fxnwhi_b_wk_wk)    
 
 # LASER BUILD PLAN
 output_csv(jwhl_b_output, jwhl_build, jwhl_b_wk)
@@ -467,9 +410,6 @@ output_csv(canon_zs_b_output, canon_zs_build, canon_zs_b_wk)
 output_csv(canon_vn_b_output, canon_vn_build, canon_vn_b_wk)
 output_csv(canon_ph_b_output, canon_ph_build, canon_ph_b_wk)
 output_csv(canon_jp_b_output, canon_jp_build, canon_jp_b_wk)
-
-# INKJET BUS_UNIT CATEGORIZATION
-# output_csv(inkjet_bus_output, ink_category, 'Inkjet_Categorization')
 
 # INKJET PLANNING_CATEGORY_CATEGORIZATION
 output_csv(plan_cat_path, plan_cat_df, 'PLANNING CATEGORIZATION')
