@@ -1566,6 +1566,117 @@ por_tv_slice_df = fm.unique_table(por_ship_tpo_rel, ['TV_FAMILY', 'COMBINED'])
 por_plt_slice_df = fm.unique_table(por_ship_tpo_rel, ['PLTFRM_NM', 'COMBINED'])
 por_sku_slice_df = fm.unique_table(por_ship_tpo_rel, ['SKU', 'COMBINED'])
 
+# %% POR ANALYTICS
+
+# GET CURRENT FISCAL YEAR
+current_fy_df = month_df.loc[month_df['Year'] == current_fy].copy()
+
+start_fy = current_fy_df['Month'].min()
+end_fy = current_fy_df['Month'].max() + relativedelta(months=1)
+fy_week_range = pd.date_range(start=start_fy,
+                              end=end_fy,
+                              freq='W-MON')
+week_df = pd.DataFrame({'CAL_WK_DT': fy_week_range})
+week_df = fm.convert_date_month(week_df, 'MONTH', 'CAL_WK_DT')
+week_df['CYCLE_WK_NM'] = week_df['CAL_WK_DT'].dt.strftime('%Y-W%V')
+week_df['CYCLE_WK_NM_CSV'] = week_df['CYCLE_WK_NM'] + '.csv'
+
+# =============================================================================
+# POR DATA 
+# =============================================================================
+por_fields = [0, 1, 2, 4, 5, 6, 7, 8]
+por_name = ['CYCLE_WK_NM',  'DC_IC_PO_Plant', 'MPA', 'PLTFRM_NM', 'BUS_UNIT_NM',
+            'SKU', 'CAL_WK_DT', 'QTY']
+
+build_path = os.path.join(user, 'HP Inc\PrintOpsDB - DBxlsxPOR\Data\BUILD')
+
+inkjet_build_df = pd.DataFrame()
+include = set(['FXN CQ', 'FXN WH INK', 'JWH INK', 'NKG TH', 'NKG YY'])
+for root, dirs, files in os.walk(build_path, topdown=True):
+    dirs[:] = [d for d in dirs if d in include]
+    for file in files:
+        read_file = pd.read_csv(os.path.join(root, file), 
+                                parse_dates=['CAL_WK_DT'],
+                                usecols=por_fields, names=por_name, header=0)
+        inkjet_build_df = pd.concat([inkjet_build_df, read_file])
+        
+# GET ONLY CURRENT FY DATA
+inkjet_build_df = inkjet_build_df.loc[inkjet_build_df['CYCLE_WK_NM'].isin(
+    week_df['CYCLE_WK_NM'].unique())].copy()
+
+inkjet_build_df['MPA'] = inkjet_build_df['MPA'].replace(fm.ink_por_naming)
+
+# MAP REGION AND FAMILY
+inkjet_build_df = inkjet_build_df.merge(region_map, how='left', 
+                                        on='DC_IC_PO_Plant')
+inkjet_build_df[['REGION', 'Sub_Region']] = inkjet_build_df[[
+    'REGION', 'Sub_Region']].fillna('')
+inkjet_build_df = inkjet_build_df.merge(
+    family_map, how='left', on=['MPA', 'PLTFRM_NM'])
+
+# FIND ENDING DATE FOR INKJET POR 
+inkjet_build_df.groupby('CYCLE_WK_NM')
+
+# FIND OFFICIAL POR WEEK DATES
+find_week_df = week_df.loc[week_df['CYCLE_WK_NM'].isin(
+    inkjet_build_df['CYCLE_WK_NM'])].copy()
+
+start_por_date = find_week_df['CAL_WK_DT'].min()
+
+
+
+# =============================================================================
+# SHIPMENT
+# =============================================================================
+inkjet_ship_df = TPO_Ink_Final.groupby(['DC_IC_PO_PLANT', 'MPa', 
+                                      'FAMILY', 'PLATFORM',
+                                      'BUS_UNIT_NM', 'SKU', 
+                                      'TPO_LA_CONF_DELIVERY_DATE_POR',
+                                      'REGION', 'SUB_REGION'], 
+                                dropna=False)['TPO_LA_QTY'].sum().reset_index()
+
+# =============================================================================
+# SHIPMENT & POR
+# =============================================================================
+# SHIPMENT
+ship_fill_df = pd.DataFrame()
+for cycle in find_week_df['CYCLE_WK_NM'][1:]:
+    ship_max_date = find_week_df.loc[find_week_df['CYCLE_WK_NM']
+                                     == cycle]['CAL_WK_DT'].item()
+    cycle_df = find_week_df.loc[
+        find_week_df['CYCLE_WK_NM'] == cycle][['CYCLE_WK_NM']].copy()
+    past_ship_df = inkjet_ship_df.loc[
+        (inkjet_ship_df['TPO_LA_CONF_DELIVERY_DATE_POR'] >= start_por_date) & \
+        (inkjet_ship_df['TPO_LA_CONF_DELIVERY_DATE_POR'] < ship_max_date)].copy()
+    past_ship_df = past_ship_df.merge(cycle_df, how='cross')
+    ship_fill_df = pd.concat([ship_fill_df, past_ship_df], ignore_index=True)
+
+# POR
+inkjet_build_df['TYPE'] = 'POR'
+inkjet_build_df.columns = inkjet_build_df.columns.str.upper()
+inkjet_build_df = inkjet_build_df.rename(columns={'MPA': 'MPa',
+                                            'PLTFRM_NM': 'PLATFORM',
+                                            'CAL_WK_DT': 'DATE_MON'})
+
+ship_fill_df['TYPE'] = 'SHIP'
+ship_fill_df = ship_fill_df.rename(
+    columns={'TPO_LA_CONF_DELIVERY_DATE_POR': 'DATE_MON',
+             'TPO_LA_QTY': 'QTY'})
+
+# COMBINE SHIPMENT & POR
+por_df = pd.concat([ship_fill_df, inkjet_build_df], ignore_index=True)
+# ADD SORTING TO DATAFRAME
+find_week_df = find_week_df.reset_index(drop=True)
+find_week_df['CYCLE_SORT'] = find_week_df.index
+por_df = por_df.merge(find_week_df[['CYCLE_WK_NM','CYCLE_SORT']], how='left',
+             on='CYCLE_WK_NM')
+os.chdir(r'C:\Users\kohm\HP Inc\PrintOpsDB - DB_DailyOutput\Data\CSV\POR Analytics')
+por_df.to_csv('POR.csv',index=False)
+
+# CHECKING IF PLATFORM & SKU DUPLICATED
+# plt_dup = por_df.drop_duplicates(subset=['PLATFORM','SKU'])
+# print(plt_dup[['PLATFORM','SKU']].duplicated().any())
+
 
 # %% PARQUET
 
