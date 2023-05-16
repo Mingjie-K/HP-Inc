@@ -416,7 +416,7 @@ output_csv(plan_cat_path, plan_cat_df, 'PLANNING CATEGORIZATION')
 
 
 # %% OUTPUT FOR NEW MPAS IF NEEDED
-# os.chdir(canon_engine_output)
-# for cycle in canon_engine_por['CYCLE_WK_NM'].unique():
-#     find_df = canon_engine_por.loc[canon_engine_por['CYCLE_WK_NM'] == cycle].copy()
+# os.chdir(jwhl_output)
+# for cycle in jwhl_por['CYCLE_WK_NM'].unique():
+#     find_df = jwhl_por.loc[jwhl_por['CYCLE_WK_NM'] == cycle].copy()
 #     find_df.to_csv(cycle+'.csv',index=False)
