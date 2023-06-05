@@ -21,31 +21,17 @@ user = os.getenv('USERPROFILE')
 # =============================================================================
 nkgyy_csv_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
                               'NKG YY\CSV')
+nkgyy_data_path = os.path.join(user, 'OneDrive - HP Inc\Backup Data',
+                               r'FACTORY REPORT\NKG YY')
 nkgyy_subject = 'NKG YY Factory Purchase Order Report'
 # =============================================================================
 # NKG TH
 # =============================================================================
 nkgth_csv_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
                               'NKG TH\CSV')
+nkgth_data_path = os.path.join(user, 'OneDrive - HP Inc\Backup Data',
+                               r'FACTORY REPORT\NKG TH')
 nkgth_subject = 'NKG TH Factory Purchase Order Report'
-# =============================================================================
-# FLEX ZH
-# =============================================================================
-fzh_csv_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
-                            'FLEX ZH\CSV')
-fzh_subject = 'FLEX ZH Factory Purchase Order Report'
-# =============================================================================
-# FLEX PTP
-# =============================================================================
-fptp_csv_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
-                             'FLEX PTP\CSV')
-fptp_subject = 'FLEX PTP-Factory Purchase Order Report'
-# =============================================================================
-# FXN CQ
-# =============================================================================
-fcq_csv_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
-                            'FXN CQ\CSV')
-fcq_subject = 'FXN CQ Factory Purchase Order Report'
 # =============================================================================
 # JWH INK
 # =============================================================================
@@ -64,54 +50,61 @@ fxnwhi_csv_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
 # =============================================================================
 jwhl_csv_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
                              'JWH LASER\CSV')
+jwhl_data_path = os.path.join(user, 'OneDrive - HP Inc\Backup Data',
+                               r'FACTORY REPORT\JWH')
 jwhl_subject = 'JWH LASER Factory Purchase Order Report'
-# =============================================================================
-# HPPS
-# =============================================================================
-hpps_csv_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
-                             'HPPS\CSV')
-hpps_subject = 'HPPS Factory Purchase Order Report'
 # =============================================================================
 # FXN WH LASER (HPPS CHANGE TO THIS)
 # =============================================================================
 fxnwhl_csv_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
                                'FXN WH LASER\CSV')
+fxnwhl_data_path = os.path.join(user, 'OneDrive - HP Inc\Backup Data',
+                               r'FACTORY REPORT\FXN WH')
 fxnwhl_subject = 'FXN WH Factory Purchase Order Report'
 # =============================================================================
 # JABIL CUU
 # =============================================================================
 jcuu_csv_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
                              'JABIL CUU\CSV')
+jcuu_data_path = os.path.join(user, 'OneDrive - HP Inc\Backup Data',
+                               r'FACTORY REPORT\JCUU')
 jcuu_subject = 'JABIL CUU Factory Purchase Order Report'
 # =============================================================================
 # FXN CZ
 # =============================================================================
 fcz_csv_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
                             'FXN CZ\CSV')
+fcz_data_path = os.path.join(user, 'OneDrive - HP Inc\Backup Data',
+                               r'FACTORY REPORT\FXN CZ')
 fcz_subject = 'FXN CZ Factory Purchase Order Report'
 # =============================================================================
 # CANON EUROPA
 # =============================================================================
 ceuro_csv_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
                               'CANON\EUROPA\CSV')
+ceuro_data_path = os.path.join(user, 'OneDrive - HP Inc\Backup Data',
+                               r'FACTORY REPORT\CANON EUROPA')
 ceuro_subject = 'CANON EUROPA Factory Purchase Order Report'
 # =============================================================================
 # CANON USA SG
 # =============================================================================
 cusa_csv_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
                              'CANON', 'USA SG\CSV')
+cusa_data_path = os.path.join(user, 'OneDrive - HP Inc\Backup Data',
+                               r'FACTORY REPORT\CANON USA')
 cusa_subject = 'CANON USA SG Factory Purchase Order Report'
 
 # %% Function
 
 
-def output_csv(csv_path, subject):
+def output_csv(csv_path, data_csv_path, subject):
     # =============================================================================
     # Set up connection to Outlook & Save to SP
     # =============================================================================
     outlook = Dispatch("Outlook.Application").GetNamespace("MAPI")
     inbox = outlook.GetDefaultFolder("6")
-    datafolder = inbox.Folders['SHIPMENT DATA']
+    # datafolder = inbox.Folders['SHIPMENT DATA']
+    deleted = outlook.GetDefaultFolder("3")
     all_inbox = inbox.Items
 
     # received_dt = datetime.now() - timedelta(days=1)
@@ -133,23 +126,37 @@ def output_csv(csv_path, subject):
             attachments = sap_list[-1].Attachments
             attachment = attachments.Item(1)
             attachment_name = str(attachment)
+            csv_name = attachment_name[:-4] + '.csv'
             # Added export name and new path to dump
             export_name = attachment_name[11:]
             dump_path = os.path.dirname(csv_path)
             attachment.SaveASFile(dump_path + '\\' + export_name)
+            time.sleep(1)
+            if data_csv_path is not None:
+                attachment.SaveASFile(data_csv_path + '\\' + attachment_name)
             print(attachment_name + ' has been exported successfully')
             time.sleep(1)
             os.chdir(dump_path)
             zip_file = zipfile.ZipFile(export_name)
             zip_file.extract('Factory Purchase Order Report.csv',
                              path=csv_path)
-            zip_file.close()
+            time.sleep(1)
+            if data_csv_path is not None:
+                zip_file.extract('Factory Purchase Order Report.csv',
+                                 path=data_csv_path + '\\CSV')
+                zip_file.close()
+                os.chdir(data_csv_path + '\\CSV')
+
+                os.replace('Factory Purchase Order Report.csv', csv_name)
+            else:
+                zip_file.close()
             message.Unread = False
-            message.move(datafolder)
+            message.move(deleted)
             print(attachment_name + ' has been extracted successfully')
+              
             
-    for mail in reversed(datafolder.Items): # just tried deleting Items in reverse order
-        mail.Delete()
+    # for mail in reversed(datafolder.Items): # just tried deleting Items in reverse order
+    #     mail.Delete()
     
 
 # %% Output to respective directories
@@ -157,22 +164,18 @@ def output_csv(csv_path, subject):
 # =============================================================================
 # INKJET
 # =============================================================================
-output_csv(nkgyy_csv_path, nkgyy_subject)
-output_csv(nkgth_csv_path, nkgth_subject)
-# output_csv(fzh_csv_path, fzh_subject)
-# output_csv(fptp_csv_path, fptp_subject)
-output_csv(fcq_csv_path, fcq_subject)
-output_csv(jwhi_csv_path, jwhi_subject)
+output_csv(nkgyy_csv_path, nkgyy_data_path, nkgyy_subject)
+output_csv(nkgth_csv_path, nkgth_data_path, nkgth_subject)
+output_csv(jwhi_csv_path, None, jwhi_subject)
 # =============================================================================
 # LASER
 # =============================================================================
-output_csv(jwhl_csv_path, jwhl_subject)
-# output_csv(hpps_zip_path, hpps_csv_path, hpps_subject)
-output_csv(fxnwhl_csv_path, fxnwhl_subject)
-output_csv(jcuu_csv_path, jcuu_subject)
-output_csv(fcz_csv_path, fcz_subject)
-output_csv(ceuro_csv_path, ceuro_subject)
-output_csv(cusa_csv_path, cusa_subject)
+output_csv(jwhl_csv_path, jwhl_data_path, jwhl_subject)
+output_csv(fxnwhl_csv_path, fxnwhl_data_path, fxnwhl_subject)
+output_csv(jcuu_csv_path, jcuu_data_path, jcuu_subject)
+output_csv(fcz_csv_path, fcz_data_path, fcz_subject)
+output_csv(ceuro_csv_path, ceuro_data_path, ceuro_subject)
+output_csv(cusa_csv_path, cusa_data_path, cusa_subject)
 # =============================================================================
 # MOVE FXN WH FACTORY PURCHASE ORDER REPORT TO INKJET DIRECTORY
 # =============================================================================
