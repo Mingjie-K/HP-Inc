@@ -355,6 +355,10 @@ missing_cat = old_plan_cat.loc[
 
 # COMBINE ALL DATA
 plan_cat_df = pd.concat([plan_cat_df,missing_cat])
+
+# CHECK DUPLICATED DATA
+if (plan_cat_df['PART_NR'].duplicated().any()):
+    plan_cat_df = plan_cat_df.drop_duplicates(keep='first')
 # %% OUTPUT TO CSV
 
 
