@@ -1480,11 +1480,14 @@ laser_cat_df_grouped = laser_cat_df_grouped.merge(
 
 # %% LASER TRADE PO VS POR
 last_week_str = lastwk_mon_date.strftime('%Y-W%V') + '.csv'
-
+# ROLLING 8 WEEKS
+eightwks = lastwk_mon_date + relativedelta(weeks=8)
 crp_folders = ['LASER WEEKLY BUILD\FXN CZ', 'LASER WEEKLY BUILD\JABIL CUU',
                'LASER WEEKLY BUILD\JWH LASER',
                'LASER WEEKLY BUILD\FXN WH LASER\ACC',
-               'LASER WEEKLY BUILD\FXN WH LASER\HW']
+               'LASER WEEKLY BUILD\FXN WH LASER\HW',
+               'LASER WEEKLY BUILD\FXN WH LASER\TONER']
+
 crp_df = pd.DataFrame()
 for mpa_str in crp_folders:
     crp_data = read_build(mpa_str, False)
@@ -1510,10 +1513,48 @@ canon_compare['MPA'] = 'Canon'
 laser_trade_df = pd.concat([laser_compare, fxnwhl_compare, canon_compare],
                            ignore_index=True)
 laser_trade_df = laser_trade_df.loc[
-    laser_trade_df['TPO_REQUESTED_DELIVERY_DATE'] >= lastwk_mon_date].copy()
+    (laser_trade_df['TPO_REQUESTED_DELIVERY_DATE'] >= lastwk_mon_date) & \
+    (laser_trade_df['TPO_REQUESTED_DELIVERY_DATE'] <= eightwks)].copy()
 
+crp_df = crp_df.loc[crp_df['CAL_WK_DT'] <= eightwks].copy()  
+  
 laser_crp_df = fm.combine_all_data(
     laser_trade_df, crp_df, family_map, plan_cat_df)
+
+# =============================================================================
+# TV FAMILY MAPPING TO MAIN DATA laser_crp_df
+# =============================================================================
+base = r'^{}'
+expr = '(?:\s|^){}(?:\s|$)'
+
+for bu, plt, fam in zip(tv_family_map['BU'], tv_family_map['PLTFRM_NM'],
+                        tv_family_map['TV_FAMILY']):
+    laser_crp_df.loc[
+        (laser_crp_df['BU'] == bu) &
+        (laser_crp_df['PLTFRM_NM'].str.contains(
+            base.format(''.join(expr.format(plt))))),
+        'TV_FAMILY'] = fam
+
+# =============================================================================
+# GROUP TO ACC/TONER
+# =============================================================================
+
+laser_crp_df.loc[(
+    laser_crp_df['CAT_SUB'].str.contains('ACCES|SUPPL|LASERJET LLC')),
+    'CATEGORY'] = 'ACC/TONER'
+
+laser_crp_df.loc[
+    laser_crp_df['PLTFRM_NM'].str.contains('ACCESSOR|AV-|UNKNOWN|FLEXBUILD-'),
+    'CATEGORY'] = 'ACC/TONER'
+
+laser_crp_df['CATEGORY'] = laser_crp_df['CATEGORY'].fillna('FFGI')
+# GET PERCENTAGE OF TPO QTY AGAINST POR BUILD PLAN
+# laser_crp_df['% TPO'] = laser_crp_df['TPO_QTY'] / laser_crp_df['QTY']
+# NO PERCENTAGE AS TPO IS 0 and POR is 0 but there is shipment
+# laser_crp_df['% TPO'] = laser_crp_df['% TPO'].fillna(0)
+# laser_crp_df['% TPO'].replace([np.inf, -np.inf], 0, inplace=True)
+
+
 
 # %% POR ANALYTICS
 
@@ -1668,6 +1709,8 @@ tv_file_names = ['Inkjet_Current_Mth', 'Inkjet_CAT', 'Laser_Current_Mth',
                  'Laser_CAT', 'W_POR_SHIP_TPO', 'QTD_POR_SHIP_TPO',
                  'Combined Title', 'Combined Data', 'Combined Relationship',
                  'Combined PorwShip']
+# LASER CRP
+output_pq('Laser CRP', laser_crp_df, 'Laser CRP')
 
 # SHIPMENT
 output_pq('Shipment', TPO_Final, 'Shipment')
@@ -1691,6 +1734,8 @@ for df, filename in zip(tv_names, tv_file_names):
     output_pq('Executive', df, filename)
 
 # %% CSV
+# LASER CRP
+output_csv('Laser CRP', laser_crp_df, 'Laser CRP')
 # SHIPMENT
 output_csv('Shipment', TPO_Final, 'Shipment')
 # MPA PERFORMANCE
