@@ -11,6 +11,8 @@ import zipfile
 import time
 import shutil
 import glob
+import pandas as pd
+pd.set_option('display.max_columns',None)
 
 user = os.getenv('USERPROFILE')
 
