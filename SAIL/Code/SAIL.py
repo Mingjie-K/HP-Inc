@@ -22,6 +22,21 @@ category_path = os.path.join(user, 'HP Inc\PrintOpsDB - DBxlsxPOR',
 os.chdir(category_path)
 plan_cat_df = pd.read_csv('PLANNING CATEGORIZATION.csv',
                           usecols=[0, 1, 2, 3])
+
+# AB PATH
+ab_dir = os.path.join(
+    user, 'HP Inc\PrintOpsDB - DBxlsxMPADashboard\Re-ackDate')
+os.chdir(ab_dir)
+
+ab_df = pd.read_csv('AB_Dates.csv',
+                    dtype={'TPO_PO_Vendor_Code': str,
+                           'Trade_PO': str,
+                           'TPO_Material': str,
+                           'TPO_Deletion Indicator': str,
+                           'Trade_PO_Status': str,
+                           'AB_Changes_Line': str},
+                    parse_dates=['First_AB_PO', 'Last_AB_Line',
+                                 'First_AB_Line'])
 # SharePoint Path
 project_func_path = os.path.join(
     user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Code')
@@ -364,16 +379,6 @@ canon_ffgi_por_df['CATEGORY'] = 'CANON FFGI'
 
 canon_dataset = fm.map_mpa(canon_dataset, laser_mpa_map)
 
-# =============================================================================
-# ADD LASER TPO VS POR (NEED TO OVERWRITE TPO_REQUESTED_DELIVERY DATE)
-# =============================================================================
-laser_dataset_crp = laser_dataset.copy()
-fxnwhl_dataset_crp = fxnwhl_dataset.copy()
-canon_dataset_crp = canon_dataset.copy()
-
-laser_dataset_crp = fm.crp_tpo_clean(laser_dataset_crp, lastwk_mon_date)
-fxnwhl_dataset_crp = fm.crp_tpo_clean(fxnwhl_dataset_crp, lastwk_mon_date)
-canon_dataset_crp = fm.crp_tpo_clean(canon_dataset_crp, lastwk_mon_date)
 
 # =============================================================================
 # ORIGINAL
@@ -403,24 +408,6 @@ fxnwhl_df_cum = fm.map_region(
 canon_df = fm.map_region(canon_df, region_map, sub_region_map)
 canon_df_cum = fm.map_region(
     canon_df_cum, region_map, sub_region_map)
-
-# MAP REGION CRP
-laser_crp_df, laser_crp_df_cum = fm.data_cleaning(
-    laser_dataset_crp, False, False, False, None)
-fxnwhl_crp_df, fxnwhl_crp_df_cum = fm.data_cleaning(
-    fxnwhl_dataset_crp, True, False, False, None)
-canon_crp_df, canon_crp_df_cum = fm.data_cleaning(
-    canon_dataset_crp, False, True, False, None)
-
-laser_crp_df = fm.map_region(laser_crp_df, region_map, sub_region_map)
-laser_crp_df_cum = fm.map_region(
-    laser_crp_df_cum, region_map, sub_region_map)
-fxnwhl_crp_df = fm.map_region(fxnwhl_crp_df, region_map, sub_region_map)
-fxnwhl_crp_df_cum = fm.map_region(
-    fxnwhl_crp_df_cum, region_map, sub_region_map)
-canon_crp_df = fm.map_region(canon_crp_df, region_map, sub_region_map)
-canon_crp_df_cum = fm.map_region(
-    canon_crp_df_cum, region_map, sub_region_map)
 
 
 # Set HPPS SEC OEM Orders to APJ
@@ -492,21 +479,6 @@ fxnwhl_df_cum.loc[fxnwhl_df_cum['SKU'].notnull(),
 
 fxnwhl_df_cum = fxnwhl_df_cum.drop(columns=['MPA', 'SKU'])
 
-# =============================================================================
-# LASER TRADE PO VS CRP
-# =============================================================================
-fxnwhl_crp_df_cum = fxnwhl_crp_df_cum.merge(fxnwhl_pl, how='left',
-                                            left_on=['TPO_PO_Vendor_Name',
-                                                     'TPO_Material'],
-                                            right_on=['MPA', 'SKU'])
-
-fxnwhl_crp_df_cum.loc[fxnwhl_crp_df_cum['SKU'].notnull(),
-                      'TPO_Profit_Center'] = fxnwhl_crp_df_cum['PL OVERWRITE']
-
-# ADDED DROP CATEGORY AND REPLACE
-# fxnwhl_df_cum = fxnwhl_df_cum.merge(
-#     fxnwhl_pc, how='left', on='TPO_Profit_Center')
-
 
 # %% SHIPMENT DATA
 
@@ -565,12 +537,8 @@ TPO_Canon_Final, Canon_POR_grouped = \
 TPO_Cum_Canon, Canon_POR_grouped = \
     fm.canon_shipment_data(canon_df_cum, True,
                            canon_etd_path, canon_ffgi_por_df)
-# ADDED FOR CANON TPO VS CRP
-TPO_Cum_Canon_CRP, Canon_POR_CRP_grouped = \
-    fm.canon_shipment_data(canon_crp_df_cum, True,
-                           canon_etd_path, canon_ffgi_por_df)
 
-canon_tpo_list = [TPO_Canon_Final, TPO_Cum_Canon, TPO_Cum_Canon_CRP]
+canon_tpo_list = [TPO_Canon_Final, TPO_Cum_Canon]
 for df in canon_tpo_list:
     df = fm.convert_date_week(df,
                               'TPO_LA_Conf_Delivery_Date_POR',
@@ -591,13 +559,9 @@ TPO_Cum_Canon = fm.shipment_por_skus(TPO_Cum_Canon,
                                      Canon_POR_grouped,
                                      True)
 
-TPO_Cum_Canon_CRP = fm.shipment_por_skus(TPO_Cum_Canon_CRP,
-                                         Canon_POR_CRP_grouped,
-                                         True)
 
 TPO_Canon_Final = TPO_Canon_Final.rename(columns={'FAMILY_NM': 'FAMILY'})
 TPO_Cum_Canon = TPO_Cum_Canon.rename(columns={'FAMILY_NM': 'FAMILY'})
-TPO_Cum_Canon_CRP = TPO_Cum_Canon_CRP.rename(columns={'FAMILY_NM': 'FAMILY'})
 
 # =============================================================================
 # MAP TO CANON SITES
@@ -611,11 +575,6 @@ TPO_Cum_Canon['TPO_REF'] = TPO_Cum_Canon['TPO_LA_Reference'].str[:2]
 TPO_Cum_Canon['TPO_PO_Vendor_Name'] = TPO_Cum_Canon['TPO_REF'].map(
     canon_site_dict)
 TPO_Cum_Canon = TPO_Cum_Canon.drop(columns=['TPO_REF'])
-
-TPO_Cum_Canon_CRP['TPO_REF'] = TPO_Cum_Canon_CRP['TPO_LA_Reference'].str[:2]
-TPO_Cum_Canon_CRP['TPO_PO_Vendor_Name'] = TPO_Cum_Canon_CRP['TPO_REF'].map(
-    canon_site_dict)
-TPO_Cum_Canon_CRP = TPO_Cum_Canon_CRP.drop(columns=['TPO_REF'])
 
 # %% FULL SHIPMENT DATA
 
@@ -648,12 +607,6 @@ ink_added_exe = fm.inkjet_sku_region_mapping(ink_added_exe,
                                              'REGION',
                                              'CHINA')
 
-# ADD NEW FOR LASER COMPARISON OF PO VS POR
-laser_crp_added = fm.por_family(laser_crp_df_cum, Laser_POR_grouped,
-                                family_map, False)
-fxnwhl_crp_added = fm.por_family(
-    fxnwhl_crp_df_cum, FXNWHL_POR_grouped, fxnwhl_family, True)
-
 # =============================================================================
 # GROUP INTO SHIPMENT AND PO
 # =============================================================================
@@ -665,17 +618,11 @@ laser_po_df, laser_ship_df = fm.po_ship(laser_added)
 hpps_po_df, hpps_ship_df = fm.po_ship(hpps_added)
 fxnwhl_po_df, fxnwhl_ship_df = fm.po_ship(fxnwhl_added)
 canon_po_df, canon_ship_df = fm.po_ship(TPO_Cum_Canon)
-# LASER TPO VS CRP
-laser_crp_po_df, laser_crp_ship_df = fm.po_ship(laser_crp_added)
-fxnwhl_crp_po_df, fxnwhl_crp_ship_df = fm.po_ship(fxnwhl_crp_added)
-canon_crp_po_df, canon_crp_ship_df = fm.po_ship(TPO_Cum_Canon_CRP)
 
 po_list = [ink_po_df, ink_po_exe_df, laser_po_df,
-           hpps_po_df, fxnwhl_po_df, canon_po_df,
-           laser_crp_po_df, fxnwhl_crp_po_df, canon_crp_po_df]
+           hpps_po_df, fxnwhl_po_df, canon_po_df]
 ship_list = [ink_ship_df, ink_ship_exe_df, laser_ship_df,
-             hpps_ship_df, fxnwhl_ship_df, canon_ship_df,
-             laser_crp_ship_df, fxnwhl_crp_ship_df, canon_crp_ship_df]
+             hpps_ship_df, fxnwhl_ship_df, canon_ship_df]
 
 # =============================================================================
 # CONVERT DATE TO MONDAY AND CHANGE TO MONTH
@@ -718,11 +665,9 @@ canon_month = canon_month.loc[~canon_month['MPA'].isnull()].copy()
 
 # ADD NEW FOR LASER COMPARISON OF PO VS POR
 laser_compare = fm.combine_po_ship(
-    laser_crp_po_df, laser_crp_ship_df, today, 'Q-OCT', True)
-fxnwhl_compare = fm.combine_po_ship(
-    fxnwhl_crp_po_df, fxnwhl_crp_ship_df, today, 'Q-OCT', True)
-canon_compare = fm.combine_po_ship(
-    canon_crp_po_df, canon_crp_ship_df, today, 'Q-OCT', True)
+    laser_po_df, laser_ship_df, today, 'Q-OCT', True)
+# fxnwhl_compare = fm.combine_po_ship(
+#     fxnwhl_po_df, fxnwhl_ship_df, today, 'Q-OCT', True)
 
 # =============================================================================
 # ADD CATEGORY FOR CANON, HPPS, FXNWHL
@@ -744,10 +689,6 @@ hpps_month = hpps_month.merge(hpps_sku_cat, how='left', on='SKU')
 canon_month['CATEGORY'] = 'CANON FFGI'
 # FOR EXECUTIVE
 ink_month_exe['TYPE'] = 'TPO_SHIP'
-# ADDED FOR TRADE PO VS POR
-fxnwhl_compare = fxnwhl_compare.merge(fxnwhl_sku_cat, how='left', on='SKU')
-canon_compare['CATEGORY'] = 'CANON FFGI'
-
 
 # =============================================================================
 # CREATE COMBINED COLUMNS FOR RELATIONSHIP
@@ -1345,6 +1286,12 @@ por_ship_df = fm.combine_all_data(
 # ONLY GET DATA TILL LATEST POR DATA
 por_ship_df = por_ship_df.loc[
     por_ship_df['TPO_REQUESTED_DELIVERY_DATE'] <= current_mon_date].copy()
+
+# PULL DATA HERE FOR LASER PAST HISTORY OF POR VS TPO VS SHIPMENT
+laser_por_ship = por_ship_df.loc[
+    (por_ship_df['BU'] == 'Laser') & \
+    (por_ship_df['MPA'] != 'Laser Foxconn Weihai') & \
+    (~por_ship_df['MPA'].str.contains('Canon'))].copy()
 # =============================================================================
 # OVERWRITE CATEGORIZATION FOR INKJET
 # =============================================================================
@@ -1472,7 +1419,7 @@ alert_grouped = laser_alert.groupby(
 alert_tpo_grouped = laser_tpo_alert.groupby(
     'TV_FAMILY')['MPA'].apply(lambda x: ', '.join(x)).reset_index() \
     .rename(columns={'MPA': 'MPA_AFFECTED_TPO'})
-    
+
 laser_cat_df_grouped = laser_cat_df_grouped.merge(
     alert_grouped, how='left', on='TV_FAMILY')
 laser_cat_df_grouped = laser_cat_df_grouped.merge(
@@ -1480,13 +1427,13 @@ laser_cat_df_grouped = laser_cat_df_grouped.merge(
 
 # %% LASER TRADE PO VS POR
 last_week_str = lastwk_mon_date.strftime('%Y-W%V') + '.csv'
-# ROLLING 8 WEEKS
+# ROLLING 8 WEEKS (EXCLUDE FXN WH LASER)
 eightwks = lastwk_mon_date + relativedelta(weeks=8)
 crp_folders = ['LASER WEEKLY BUILD\FXN CZ', 'LASER WEEKLY BUILD\JABIL CUU',
-               'LASER WEEKLY BUILD\JWH LASER',
-               'LASER WEEKLY BUILD\FXN WH LASER\ACC',
-               'LASER WEEKLY BUILD\FXN WH LASER\HW',
-               'LASER WEEKLY BUILD\FXN WH LASER\TONER']
+               'LASER WEEKLY BUILD\JWH LASER']
+               # 'LASER WEEKLY BUILD\FXN WH LASER\ACC',
+               # 'LASER WEEKLY BUILD\FXN WH LASER\HW',
+               # 'LASER WEEKLY BUILD\FXN WH LASER\TONER'
 
 crp_df = pd.DataFrame()
 for mpa_str in crp_folders:
@@ -1496,30 +1443,147 @@ for mpa_str in crp_folders:
 # MAP LASER MPA
 crp_df['LOC_FROM_NM'] = crp_df['LOC_FROM_NM'].replace(
     fm.laser_por_naming)
-canon_build_df['LOC_FROM_NM'] = canon_build_df['LOC_FROM_NM'].replace(
-    fm.canon_short_naming)
+
 # MAP REGION
 crp_df = fm.map_por_region(crp_df, region_map)
-canon_build_df = fm.map_por_region(canon_build_df, region_map)
 
 # GROUP POR
 crp_df = fm.group_por(crp_df)
-canon_build_df = fm.group_por(canon_build_df)
-crp_df = pd.concat([crp_df, canon_build_df], ignore_index=True)
+
+# =============================================================================
+# USE AB DATE TO MERGE INTO CRP
+# =============================================================================
 
 # COMBINE ALL LASER TRADE PO AND GET DATA STARTING FROM CURRENT MONTH
-# REPLACE CANON NAMING AS THERE ARE EMPTY FIELDS IN MPA COLUMN
-canon_compare['MPA'] = 'Canon'
-laser_trade_df = pd.concat([laser_compare, fxnwhl_compare, canon_compare],
-                           ignore_index=True)
-laser_trade_df = laser_trade_df.loc[
-    (laser_trade_df['TPO_REQUESTED_DELIVERY_DATE'] >= lastwk_mon_date) & \
-    (laser_trade_df['TPO_REQUESTED_DELIVERY_DATE'] <= eightwks)].copy()
+laser_ab_df = ab_df.copy()
+# laser_ab_df = ab_df.loc[
+#     (ab_df['Last_AB_Line'] >= lastwk_mon_date) & \
+#     (ab_df['Last_AB_Line'] <= eightwks)].copy()
+# CREATE ANOTHER FOR PLANNING
+# plan_ab_df = ab_df.copy()
+# REMOVE DELETED POS
+laser_ab_df = laser_ab_df.loc[
+    laser_ab_df['TPO_Deletion Indicator'] != 'L'].copy()
+# plan_ab_df = plan_ab_df.loc[
+#     plan_ab_df['TPO_Deletion Indicator'] != 'L'].copy()
+# USE LASER MONTH AS REFERENCE TO TAKE ALL SKUS AND REGION FROM AB
+laser_skus = laser_compare['SKU'].unique()
+laser_tpo_regions = fm.unique_table(laser_compare, ['TRADE_PO','REGION'])
+# ADD DATA FOR PLANNING
+laser_ab_df = laser_ab_df.loc[laser_ab_df['TPO_Material'].isin(laser_skus)].copy()
+# plan_ab_df = plan_ab_df.loc[plan_ab_df['TPO_Material'].isin(laser_skus)].copy()
+# MAP AND GET MPA NAMING
+laser_ab_df = laser_ab_df.merge(
+    laser_mpa_map, how='left', left_on=['TPO_PO_Vendor_Code'], 
+    right_on=['MPA VENDOR CODE'])
+# PLANNING
+# plan_ab_df = plan_ab_df.merge(
+#     laser_mpa_map, how='left', left_on=['TPO_PO_Vendor_Code'], 
+#     right_on=['MPA VENDOR CODE'])
+# REMOVE FOXCONN WH LASER
+laser_ab_df = laser_ab_df.loc[
+    laser_ab_df['MPA'] != 'Laser Foxconn Weihai'].copy()
+# plan_ab_df = plan_ab_df.loc[
+#     plan_ab_df['MPA'] != 'Laser Foxconn Weihai'].copy()
+# MAP AND GET REGION
+laser_ab_df = laser_ab_df.merge(laser_tpo_regions, 
+                                how='left', 
+                                left_on=['Trade_PO'], right_on=['TRADE_PO'])
+# plan_ab_df = plan_ab_df.merge(laser_tpo_regions, 
+#                                 how='left', 
+#                                 left_on=['Trade_PO'], right_on=['TRADE_PO'])
+# CONVERT AB DATE TO MONDAY
+laser_ab_df = fm.convert_date_week(laser_ab_df, 'DATE', 'Last_AB_Line')
+# plan_ab_df = fm.convert_date_week(plan_ab_df, 'DATE', 'Last_AB_Line')
 
-crp_df = crp_df.loc[crp_df['CAL_WK_DT'] <= eightwks].copy()  
-  
+laser_ab_group = laser_ab_df.groupby(
+    ['MPA','BU','REGION','TPO_Material',
+     'DATE'],dropna=False)['TPO_AB_Qty'].sum().reset_index()
+laser_ab_group = fm.convert_date_month(laser_ab_group,'MONTH_POR','DATE')
+laser_ab_group = fm.convert_fy(laser_ab_group, 'Q_POR', 'DATE', 'Q-OCT', 'FY_YEAR')
+laser_ab_group = laser_ab_group.rename(columns={'MPA':'TPO_PO_Vendor_Name'})
+
+# plan_ab_group = plan_ab_df.groupby(
+#     ['MPA','BU','REGION','TPO_Material',
+#      'DATE'],dropna=False)['TPO_AB_Qty'].sum().reset_index()
+# plan_ab_group = fm.convert_date_month(plan_ab_group,'MONTH_POR','DATE')
+# plan_ab_group = fm.convert_fy(plan_ab_group, 'Q_POR', 'DATE', 'Q-OCT', 'FY_YEAR')
+# plan_ab_group = plan_ab_group.rename(columns={'MPA':'TPO_PO_Vendor_Name'})
+
+laser_ab_group = fm.por_family(laser_ab_group, Laser_POR_grouped,
+                            family_map, False)
+# plan_ab_group = fm.por_family(plan_ab_group, Laser_POR_grouped,
+#                             family_map, False)
+# MERGE WITH PLANNING CAT
+laser_ab_group = laser_ab_group.merge(
+    plan_cat_df, how='left', on='PART_NR')
+# plan_ab_group = plan_ab_group.merge(
+#     plan_cat_df, how='left', on='PART_NR')
+# DROP UNNECESSARY COLUMNS
+laser_ab_group = laser_ab_group.drop(columns=['MPA','LOC_FROM_NM','PART_NR'])
+
+laser_ab_group = laser_ab_group.rename(columns={'TPO_PO_Vendor_Name':'MPA',
+                                                'TPO_Material':'PART_NR'})
+# plan_ab_group = plan_ab_group.drop(columns=['MPA','LOC_FROM_NM','PART_NR'])
+
+# plan_ab_group = plan_ab_group.rename(columns={'TPO_PO_Vendor_Name':'MPA',
+#                                                 'TPO_Material':'PART_NR'})
+
+# plan_crp_df = crp_df.copy()
+# crp_df = crp_df.loc[crp_df['CAL_WK_DT'] <= eightwks].copy()
+
+# plan_laser_compare = laser_compare.copy()
+# laser_compare = laser_compare.loc[
+#     (laser_compare['TPO_REQUESTED_DELIVERY_DATE'] >= lastwk_mon_date) & \
+#     (laser_compare['TPO_REQUESTED_DELIVERY_DATE'] <= eightwks)].copy()
+
 laser_crp_df = fm.combine_all_data(
-    laser_trade_df, crp_df, family_map, plan_cat_df)
+    laser_compare, crp_df, family_map, plan_cat_df)
+laser_crp_df = laser_crp_df.drop(columns=['SKU'])
+
+laser_crp_df = laser_crp_df.loc[
+    (laser_crp_df['TPO_REQUESTED_DELIVERY_DATE'] >= lastwk_mon_date) & \
+    (laser_crp_df['TPO_REQUESTED_DELIVERY_DATE'] <= eightwks)].copy()
+    
+laser_por_ship = laser_por_ship.drop(columns=['SKU'])
+
+laser_por_ship = laser_por_ship.loc[
+    (laser_por_ship['TPO_REQUESTED_DELIVERY_DATE'] < lastwk_mon_date)].copy()
+
+laser_crp_df = pd.concat([laser_por_ship,laser_crp_df],ignore_index=True)
+# plan_laser_crp_df = fm.combine_all_data(
+#     plan_laser_compare, plan_crp_df, family_map, plan_cat_df)
+# plan_laser_crp_df = plan_laser_crp_df.drop(columns=['SKU'])
+# REMOVE NAMING OF COLUMNS
+laser_crp_df.columns = laser_crp_df.columns.str.replace('TPO_REQUESTED_DELIVERY_', '')
+# plan_laser_crp_df.columns = plan_laser_crp_df.columns.str.replace('TPO_REQUESTED_DELIVERY_', '')
+
+laser_crp_df = laser_crp_df.merge(
+    laser_ab_group,
+    how='outer', 
+    left_on=['BU','MPA','REGION','PART_NR','DATE','MONTH_POR','Q_POR','FY_YEAR',
+             'CAT_NM','CAT_SUB','PROD_LINE_CD',
+             'PLTFRM_NM','BUS_UNIT_NM','FAMILY'], 
+    right_on=['BU','MPA','REGION','PART_NR','DATE','MONTH_POR','Q_POR','FY_YEAR',
+              'CAT_NM','CAT_SUB','PROD_LINE_CD',
+              'PLTFRM_NM','BUS_UNIT_NM','FAMILY'])
+
+# plan_laser_crp_df = plan_laser_crp_df.merge(
+#     plan_ab_group,
+#     how='outer', 
+#     left_on=['BU','MPA','REGION','PART_NR','DATE','MONTH_POR','Q_POR','FY_YEAR',
+#              'CAT_NM','CAT_SUB','PROD_LINE_CD',
+#              'PLTFRM_NM','BUS_UNIT_NM','FAMILY'], 
+#     right_on=['BU','MPA','REGION','PART_NR','DATE','MONTH_POR','Q_POR','FY_YEAR',
+#               'CAT_NM','CAT_SUB','PROD_LINE_CD',
+#               'PLTFRM_NM','BUS_UNIT_NM','FAMILY'])
+
+# FILL IN EMPTY ROWS AFTER OUTER JOIN
+laser_crp_df[['QTY','TPO_QTY','TPO_LA_QTY','TPO_AB_Qty']] = \
+    laser_crp_df[['QTY','TPO_QTY','TPO_LA_QTY','TPO_AB_Qty']].fillna(0)
+    
+# plan_laser_crp_df[['QTY','TPO_QTY','TPO_LA_QTY','TPO_AB_Qty']] = \
+#     plan_laser_crp_df[['QTY','TPO_QTY','TPO_LA_QTY','TPO_AB_Qty']].fillna(0)
 
 # =============================================================================
 # TV FAMILY MAPPING TO MAIN DATA laser_crp_df
@@ -1534,6 +1598,14 @@ for bu, plt, fam in zip(tv_family_map['BU'], tv_family_map['PLTFRM_NM'],
         (laser_crp_df['PLTFRM_NM'].str.contains(
             base.format(''.join(expr.format(plt))))),
         'TV_FAMILY'] = fam
+    
+# for bu, plt, fam in zip(tv_family_map['BU'], tv_family_map['PLTFRM_NM'],
+#                         tv_family_map['TV_FAMILY']):
+#     plan_laser_crp_df.loc[
+#         (plan_laser_crp_df['BU'] == bu) &
+#         (plan_laser_crp_df['PLTFRM_NM'].str.contains(
+#             base.format(''.join(expr.format(plt))))),
+#         'TV_FAMILY'] = fam
 
 # =============================================================================
 # GROUP TO ACC/TONER
@@ -1547,13 +1619,46 @@ laser_crp_df.loc[
     laser_crp_df['PLTFRM_NM'].str.contains('ACCESSOR|AV-|UNKNOWN|FLEXBUILD-'),
     'CATEGORY'] = 'ACC/TONER'
 
-laser_crp_df['CATEGORY'] = laser_crp_df['CATEGORY'].fillna('FFGI')
+laser_crp_df['CATEGORY'] = laser_crp_df['CATEGORY'].fillna('FFGI/FGI')
+
+# =============================================================================
+# START FROM PREVIOUS QUARTER
+# =============================================================================
+month_df['Previous_Q_Month'] = month_df['Month'] - pd.DateOffset(months=3)
+month_df['Previous_Q_Quarter'] = month_df['Previous_Q_Month'].dt.to_period('Q-OCT')
+
+previous_q = month_df.loc[
+    month_df['Month'] == current_mon_month]['Previous_Q_Quarter'].unique()
+previous_q_start = month_df.loc[
+    month_df['Previous_Q_Quarter'].isin(previous_q)]['Previous_Q_Month'].min()
+
+# =============================================================================
+# START FROM LAST QUARTER AND BEFORE ROLLING 8 WEEKS
+# =============================================================================
+laser_crp_df = laser_crp_df.loc[
+    (laser_crp_df['MONTH_POR'] >= previous_q_start) & \
+    (laser_crp_df['DATE'] <= eightwks)].copy()
+
+laser_crp_df.loc[
+    (laser_crp_df['DATE'] >= lastwk_mon_date) & \
+    (laser_crp_df['DATE'] <= eightwks), 'PURPOSE'] = 'IDLING'
+    
+laser_crp_df['PURPOSE'] = laser_crp_df['PURPOSE'].fillna('MGT')
+
+# plan_laser_crp_df.loc[(
+#     plan_laser_crp_df['CAT_SUB'].str.contains('ACCES|SUPPL|LASERJET LLC')),
+#     'CATEGORY'] = 'ACC/TONER'
+
+# plan_laser_crp_df.loc[
+#     plan_laser_crp_df['PLTFRM_NM'].str.contains('ACCESSOR|AV-|UNKNOWN|FLEXBUILD-'),
+#     'CATEGORY'] = 'ACC/TONER'
+
+# plan_laser_crp_df['CATEGORY'] = plan_laser_crp_df['CATEGORY'].fillna('FFGI/FGI')
 # GET PERCENTAGE OF TPO QTY AGAINST POR BUILD PLAN
 # laser_crp_df['% TPO'] = laser_crp_df['TPO_QTY'] / laser_crp_df['QTY']
 # NO PERCENTAGE AS TPO IS 0 and POR is 0 but there is shipment
 # laser_crp_df['% TPO'] = laser_crp_df['% TPO'].fillna(0)
 # laser_crp_df['% TPO'].replace([np.inf, -np.inf], 0, inplace=True)
-
 
 
 # %% POR ANALYTICS
