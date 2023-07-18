@@ -1267,7 +1267,7 @@ def combine_all_data(tpo_data, por_data, family_df, planning_df):
                                     right_on='PART_NR')
     return por_ship_df
 
-# %% LASER TRADE PO VS CRP
+# %% LASER TRADE PO VS CRP (PREVIOUS REQUIREMENT)
 def crp_tpo_clean(df,lastwk_mon_date):
      df.loc[
          df['TPO_Requested_Delivery_Date'] < df['TPO_Created_On'],
