@@ -569,19 +569,42 @@ def canon_shipment_data(dataset, cum_bool, etd_path, por_df):
     os.chdir(etd_path)
     csv_files = glob.glob(etd_path + '/*' + '.csv')
     latest_csv = max(csv_files, key=os.path.getctime)
-    # print(latest_csv)
-    # REPLACE TO CROSSTAB FORMAT
-    etd_df = pd.read_csv(latest_csv, encoding='UTF-16 LE',
-                         sep='\t',
+    etd_df = pd.read_csv(latest_csv, 
                          dtype={'TPO_PO_Vendor_Code': str,
                                 'Trade_PO': str,
+                                'TRADE_PO_LINE':str,
+                                'CDO_IC_PO':str,
+                                'DC_IC_PO':str,
+                                'DC_IC_PO_LINE':str,
                                 'TPO_Material': str,
-                                'TPO_LA_Inbound_Delivery_No': str},
-                         parse_dates=['TPOLATABLE_IBP_ETD_FACTORY'])
-
-    etd_df['TPOLATABLE_IBP_ETD_FACTORY'] = pd.to_datetime(
-        etd_df['TPOLATABLE_IBP_ETD_FACTORY'],
-        errors='coerce')
+                                'TPO_Qty':float,
+                                'TPO_Plant':str,
+                                'TPO_Shipping_Point':str,
+                                'TPO_PO_Type':str,
+                                'TPO_AB_Line':str,
+                                'TPO_AB_Qty':float,
+                                'TPO_LA_Inbound_Delivery_No': str,
+                                'TPO_LA_Qty':float,
+                                'TPO_LA_Reference':str,
+                                'Trade_PO_Open_Quantity':float,
+                                'DC_IC_PO_Qty':float,
+                                'DC_IC_PO_Plant':str,
+                                'CDO_IC_PO_Plant':str,
+                                'DC_IC_PO_Requisitioner':str,
+                                'CDO_IC_PO_Requisitioner':str,
+                                'Requisitioner':str,
+                                'TPOLATABLE_DELIVERY_NR':str,
+                                'TPOLATABLE_BILL_LADING':str,
+                                'TPOLATABLE_MNS_OF_TRANS_ID':str},
+                         parse_dates=['TPO_Created_On',
+                                      'TPO_Requested_Delivery_Date',
+                                      'TPO_AB_Conf_Delivery_Date',
+                                      'TPO_LA_Conf_Delivery_Date',
+                                      'DC_IC_PO_Req_Delivery_Date',
+                                      'CDO_IC_PO_Req_Delivery_Date',
+                                      'TPOLATABLE_IBP_ETD_FACTORY',
+                                      'TPOLATABLE_IBP_ETA_DC',
+                                      'TPOLATABLE_IBD_PORT_ARRIVAL_DT'])
 
     # # NEED GROUP ETD DATASET FIRST
     etd_df = etd_df[['TPO_PO_Vendor_Code', 'Trade_PO', 'TPO_Material',
