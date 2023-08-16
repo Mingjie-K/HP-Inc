@@ -12,7 +12,7 @@ import time
 import shutil
 import glob
 import pandas as pd
-pd.set_option('display.max_columns',None)
+pd.set_option('display.max_columns', None)
 
 user = os.getenv('USERPROFILE')
 
@@ -44,7 +44,7 @@ jwhi_subject = 'JWH INK Factory Order Purchase Report'
 # FXNWH INK
 # =============================================================================
 fxnwhi_csv_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
-                             'FXN WH INK\CSV')
+                               'FXN WH INK\CSV')
 # %% LASER
 # EXPORT DATA STARTS 1 MAR 2022 (CREATED ON)
 # =============================================================================
@@ -53,7 +53,7 @@ fxnwhi_csv_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
 jwhl_csv_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
                              'JWH LASER\CSV')
 jwhl_data_path = os.path.join(user, 'OneDrive - HP Inc\Backup Data',
-                               r'FACTORY REPORT\JWH')
+                              r'FACTORY REPORT\JWH')
 jwhl_subject = 'JWH LASER Factory Purchase Order Report'
 # =============================================================================
 # FXN WH LASER (HPPS CHANGE TO THIS)
@@ -61,7 +61,7 @@ jwhl_subject = 'JWH LASER Factory Purchase Order Report'
 fxnwhl_csv_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
                                'FXN WH LASER\CSV')
 fxnwhl_data_path = os.path.join(user, 'OneDrive - HP Inc\Backup Data',
-                               r'FACTORY REPORT\FXN WH')
+                                r'FACTORY REPORT\FXN WH')
 fxnwhl_subject = 'FXN WH Factory Purchase Order Report'
 # =============================================================================
 # JABIL CUU
@@ -69,7 +69,7 @@ fxnwhl_subject = 'FXN WH Factory Purchase Order Report'
 jcuu_csv_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
                              'JABIL CUU\CSV')
 jcuu_data_path = os.path.join(user, 'OneDrive - HP Inc\Backup Data',
-                               r'FACTORY REPORT\JCUU')
+                              r'FACTORY REPORT\JCUU')
 jcuu_subject = 'JABIL CUU Factory Purchase Order Report'
 # =============================================================================
 # FXN CZ
@@ -77,7 +77,7 @@ jcuu_subject = 'JABIL CUU Factory Purchase Order Report'
 fcz_csv_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
                             'FXN CZ\CSV')
 fcz_data_path = os.path.join(user, 'OneDrive - HP Inc\Backup Data',
-                               r'FACTORY REPORT\FXN CZ')
+                             r'FACTORY REPORT\FXN CZ')
 fcz_subject = 'FXN CZ Factory Purchase Order Report'
 # =============================================================================
 # CANON EUROPA
@@ -93,7 +93,7 @@ ceuro_subject = 'CANON EUROPA Factory Purchase Order Report'
 cusa_csv_path = os.path.join(user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Data',
                              'CANON', 'USA SG\CSV')
 cusa_data_path = os.path.join(user, 'OneDrive - HP Inc\Backup Data',
-                               r'FACTORY REPORT\CANON USA')
+                              r'FACTORY REPORT\CANON USA')
 cusa_subject = 'CANON USA SG Factory Purchase Order Report'
 
 # %% Function
@@ -140,26 +140,28 @@ def output_csv(csv_path, data_csv_path, subject):
             time.sleep(1)
             os.chdir(dump_path)
             zip_file = zipfile.ZipFile(export_name)
-            zip_file.extract('Factory Purchase Order Report.csv',
+            zip_file.extract('Factory Purchase Order Report_V.csv',
                              path=csv_path)
             time.sleep(1)
+            os.chdir(csv_path)
+            os.replace('Factory Purchase Order Report_V.csv',
+                       'Factory Purchase Order Report.csv')
             if data_csv_path is not None:
-                zip_file.extract('Factory Purchase Order Report.csv',
+                zip_file.extract('Factory Purchase Order Report_V.csv',
                                  path=data_csv_path + '\\CSV')
                 zip_file.close()
                 os.chdir(data_csv_path + '\\CSV')
 
-                os.replace('Factory Purchase Order Report.csv', csv_name)
+                os.replace('Factory Purchase Order Report_V.csv', csv_name)
             else:
                 zip_file.close()
             message.Unread = False
             message.move(deleted)
             print(attachment_name + ' has been extracted successfully')
-              
-            
+
     # for mail in reversed(datafolder.Items): # just tried deleting Items in reverse order
     #     mail.Delete()
-    
+
 
 # %% Output to respective directories
 # FLEX ZH, FLEX PTP AND HPPS STOPPED
@@ -190,5 +192,8 @@ fxnwhi_path = os.path.dirname(fxnwhi_csv_path)
 shutil.copy(fxnwhl_latest_zip, fxnwhi_path)
 os.chdir(fxnwhi_path)
 fxnwhi_zip_file = zipfile.ZipFile(fxnwhl_latest_zip, mode='r')
-fxnwhi_zip_file.extract('Factory Purchase Order Report.csv',
-                  path=fxnwhi_csv_path)
+fxnwhi_zip_file.extract('Factory Purchase Order Report_V.csv',
+                        path=fxnwhi_csv_path)
+os.chdir(fxnwhi_csv_path)
+os.replace('Factory Purchase Order Report_V.csv',
+           'Factory Purchase Order Report.csv')
