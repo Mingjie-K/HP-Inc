@@ -25,15 +25,15 @@ laser_por_naming = {'HP FOXCONN PARDUBICE MFG(SG31)': 'Laser Foxconn Czech',
                     'HP Printing Shandong': 'Laser HPPS',
                     'FOXCONN WEIHAI': 'Laser Foxconn Weihai'}
 
-laser_short_naming = {'Laser Foxconn Czech':'FXN CZ',
-                      'Laser Foxconn Weihai':'FXN WH',
-                      'Laser Jabil Chihuahua':'JCUU',
-                      'Laser Jabil Weihai':'JWH'}
+laser_short_naming = {'Laser Foxconn Czech': 'FXN CZ',
+                      'Laser Foxconn Weihai': 'FXN WH',
+                      'Laser Jabil Chihuahua': 'JCUU',
+                      'Laser Jabil Weihai': 'JWH'}
 
-canon_short_naming = {'Canon CN, Zhongshan':'Canon',
-                      'Canon JP':'Canon',
-                      'Canon PH':'Canon',
-                      'Canon VN':'Canon'}
+canon_short_naming = {'Canon CN, Zhongshan': 'Canon',
+                      'Canon JP': 'Canon',
+                      'Canon PH': 'Canon',
+                      'Canon VN': 'Canon'}
 
 # %% MAP MPA & REGION / REPLACE MPA NAMING
 
@@ -510,8 +510,8 @@ def shipment_por_skus(grouped_df, por_items, canon_cum_bool):
  # Start from August
     if canon_cum_bool:
         grouped_df = grouped_df.loc[
-            (grouped_df['TPO_LA_Conf_Delivery_Month_POR'] >= '2021-08-01') |
-            (grouped_df['TPO_LA_Conf_Delivery_Month_POR'].isnull())].copy()
+            (grouped_df['TPO_LA_Conf_Delivery_Month_POR'] >= '2021-08-01')
+            | (grouped_df['TPO_LA_Conf_Delivery_Month_POR'].isnull())].copy()
     else:
         grouped_df = grouped_df.loc[
             grouped_df['TPO_LA_Conf_Delivery_Month_POR'] >= '2021-08-01'].copy()
@@ -569,33 +569,33 @@ def canon_shipment_data(dataset, cum_bool, etd_path, por_df):
     os.chdir(etd_path)
     csv_files = glob.glob(etd_path + '/*' + '.csv')
     latest_csv = max(csv_files, key=os.path.getctime)
-    etd_df = pd.read_csv(latest_csv, 
+    etd_df = pd.read_csv(latest_csv,
                          dtype={'TPO_PO_Vendor_Code': str,
                                 'Trade_PO': str,
-                                'TRADE_PO_LINE':str,
-                                'CDO_IC_PO':str,
-                                'DC_IC_PO':str,
-                                'DC_IC_PO_LINE':str,
+                                'TRADE_PO_LINE': str,
+                                'CDO_IC_PO': str,
+                                'DC_IC_PO': str,
+                                'DC_IC_PO_LINE': str,
                                 'TPO_Material': str,
-                                'TPO_Qty':float,
-                                'TPO_Plant':str,
-                                'TPO_Shipping_Point':str,
-                                'TPO_PO_Type':str,
-                                'TPO_AB_Line':str,
-                                'TPO_AB_Qty':float,
+                                'TPO_Qty': float,
+                                'TPO_Plant': str,
+                                'TPO_Shipping_Point': str,
+                                'TPO_PO_Type': str,
+                                'TPO_AB_Line': str,
+                                'TPO_AB_Qty': float,
                                 'TPO_LA_Inbound_Delivery_No': str,
-                                'TPO_LA_Qty':float,
-                                'TPO_LA_Reference':str,
-                                'Trade_PO_Open_Quantity':float,
-                                'DC_IC_PO_Qty':float,
-                                'DC_IC_PO_Plant':str,
-                                'CDO_IC_PO_Plant':str,
-                                'DC_IC_PO_Requisitioner':str,
-                                'CDO_IC_PO_Requisitioner':str,
-                                'Requisitioner':str,
-                                'TPOLATABLE_DELIVERY_NR':str,
-                                'TPOLATABLE_BILL_LADING':str,
-                                'TPOLATABLE_MNS_OF_TRANS_ID':str},
+                                'TPO_LA_Qty': float,
+                                'TPO_LA_Reference': str,
+                                'Trade_PO_Open_Quantity': float,
+                                'DC_IC_PO_Qty': float,
+                                'DC_IC_PO_Plant': str,
+                                'CDO_IC_PO_Plant': str,
+                                'DC_IC_PO_Requisitioner': str,
+                                'CDO_IC_PO_Requisitioner': str,
+                                'Requisitioner': str,
+                                'TPOLATABLE_DELIVERY_NR': str,
+                                'TPOLATABLE_BILL_LADING': str,
+                                'TPOLATABLE_MNS_OF_TRANS_ID': str},
                          parse_dates=['TPO_Created_On',
                                       'TPO_Requested_Delivery_Date',
                                       'TPO_AB_Conf_Delivery_Date',
@@ -811,6 +811,8 @@ def quarter_year_name(df, q_col, y_col, new_q_col, new_y_col):
 # =============================================================================
 # GET ONLY POR SKUS AND ADD FAMILY
 # =============================================================================
+
+
 def por_family(cum_df, por_grouped, family, hpps_bool):
     # Get only POR SKUs
     cum_month = cum_df.merge(por_grouped,
@@ -860,6 +862,53 @@ def po_ship(cum_month):
     )
 
     return po_df, ship_df
+
+
+def canon_po_ship(cum_month):
+    # START AUGUST 2021
+    cum_month = cum_month.loc[cum_month['TPO_Requested_Delivery_Date']
+                              >= '2021-08-02'].copy()
+
+    ship_df = cum_month.groupby(['TPO_PO_Vendor_Name',
+                                 'Trade_PO',
+                                 'TPO_LA_Conf_Delivery_Date',
+                                 'BU', 'PLTFRM_NM',
+                                 'BUS_UNIT_NM', 'FAMILY',
+                                 'REGION', 'PART_NR'],
+                                dropna=False)[['TPO_Qty',
+                                               'TPO_LA_Qty']].sum().reset_index()
+    ship_df = ship_df.loc[ship_df
+                          ['TPO_LA_Conf_Delivery_Date'].notnull()].copy()
+
+    return ship_df
+
+
+def canon_combine_po_ship(ship_df, today_date, fy_quarter):
+    ship_df['TPO_Requested_Delivery_Date'] = \
+        ship_df['TPO_LA_Conf_Delivery_Date']
+    ship_df['TPO_Requested_Delivery_Month_POR'] = \
+        ship_df['TPO_LA_Conf_Delivery_Month_POR']
+    last_day_month = today_date.replace(
+        day=1) + relativedelta(months=1) - relativedelta(days=1)
+    ship_df = ship_df.loc[
+        (ship_df['TPO_Requested_Delivery_Month_POR'] >= '2021-08-01')
+        & (ship_df['TPO_Requested_Delivery_Date'] <= last_day_month)].copy()
+    ship_df['TPO_LA_Qty'] = ship_df['TPO_LA_Qty'].fillna(0)
+    ship_df['TPO_Qty'] = ship_df['TPO_Qty'].fillna(0)
+    ship_df = ship_df.rename(columns={'TPO_PO_Vendor_Name': 'MPA',
+                                      'PART_NR': 'SKU'})
+    ship_df.columns = ship_df.columns.str.upper()
+    # Try for dynamic
+    ship_df['TPO_REQUESTED_DELIVERY_MONTH_STR'] =  \
+        ship_df['TPO_REQUESTED_DELIVERY_MONTH_POR'].dt.strftime('%Y_%m')
+    # if ink_exe_bool:
+    ship_df = convert_fy(ship_df, 'QUARTER',
+                         'TPO_REQUESTED_DELIVERY_MONTH_POR',
+                         fy_quarter,
+                         'QUARTER_YEAR')
+    ship_df = quarter_year_name(ship_df, 'QUARTER', 'QUARTER_YEAR',
+                                'QUARTER_NAME', 'FY_NAME')
+    return ship_df
 
 # GROUP BY MONTH AND WEEK
 
@@ -921,8 +970,8 @@ def combine_po_ship(po_df, ship_df, today_date, fy_quarter, povpor_bool):
         last_day_month = today_date.replace(
             day=1) + relativedelta(months=1) - relativedelta(days=1)
         po_ship_df = po_ship_df.loc[
-            (po_ship_df['TPO_Requested_Delivery_Month_POR'] >= '2021-08-01') &
-            (po_ship_df['TPO_Requested_Delivery_Date'] <= last_day_month)].copy()
+            (po_ship_df['TPO_Requested_Delivery_Month_POR'] >= '2021-08-01')
+            & (po_ship_df['TPO_Requested_Delivery_Date'] <= last_day_month)].copy()
     po_ship_df = po_ship_df.rename(columns={'TPO_PO_Vendor_Name': 'MPA'})
 
     po_ship_df = po_ship_df.rename(columns={'PART_NR': 'SKU'})
@@ -935,27 +984,27 @@ def combine_po_ship(po_df, ship_df, today_date, fy_quarter, povpor_bool):
                             'TPO_REQUESTED_DELIVERY_MONTH_POR',
                             fy_quarter,
                             'QUARTER_YEAR')
-    po_ship_df = quarter_year_name(po_ship_df, 'QUARTER', 'QUARTER_YEAR', 
+    po_ship_df = quarter_year_name(po_ship_df, 'QUARTER', 'QUARTER_YEAR',
                                    'QUARTER_NAME', 'FY_NAME')
 
     return po_ship_df
 
 # %% PO THAT ARE OPEN AND NOT DONE DEAL
 
+
 def remain_po(po_df, ship_df, cur_month):
     shipped = ship_df.groupby([
-        'TPO_PO_Vendor_Name','Trade_PO','PART_NR'],dropna=False) \
-        ['TPO_LA_Qty'].sum().reset_index()
-    shipped = po_df.merge(shipped,how='left',
-                          on=['TPO_PO_Vendor_Name','Trade_PO','PART_NR'])
+        'TPO_PO_Vendor_Name', 'Trade_PO', 'PART_NR'], dropna=False)['TPO_LA_Qty'].sum().reset_index()
+    shipped = po_df.merge(shipped, how='left',
+                          on=['TPO_PO_Vendor_Name', 'Trade_PO', 'PART_NR'])
     shipped['TPO_LA_Qty'] = shipped['TPO_LA_Qty'].fillna(0)
     shipped['REMAINING_PO_QTY'] = shipped['TPO_Qty'] - shipped['TPO_LA_Qty']
-    
+
     shipped = shipped.loc[
-        (shipped['REMAINING_PO_QTY'] != 0)  &  
-        (shipped['TPO_Requested_Delivery_Month_POR'] == cur_month)].copy()
-    shipped = shipped.rename(columns={'TPO_PO_Vendor_Name':'MPA',
-                                      'PART_NR':'SKU'})
+        (shipped['REMAINING_PO_QTY'] != 0)
+        & (shipped['TPO_Requested_Delivery_Month_POR'] == cur_month)].copy()
+    shipped = shipped.rename(columns={'TPO_PO_Vendor_Name': 'MPA',
+                                      'PART_NR': 'SKU'})
     shipped.columns = shipped.columns.str.upper()
     return shipped
 
@@ -987,8 +1036,8 @@ def combine_ship_build(df, ship_df, today_date, mon_date,
                                < get_date].copy()
 
     # REMOVE MPA For Flex
-    WR_Final = WR_Final.loc[(WR_Final['MPa'] != 'INK Flex PTP Malaysia') &
-                            (WR_Final['MPa'] != 'INK Flex Zhuhai')].copy()
+    WR_Final = WR_Final.loc[(WR_Final['MPa'] != 'INK Flex PTP Malaysia')
+                            & (WR_Final['MPa'] != 'INK Flex Zhuhai')].copy()
 
     WR_Final = WR_Final.groupby(['BU', 'BUS_UNIT_NM', 'MPA SITE', 'MPa',
                                  'SKU', 'REGION', 'PLATFORM', 'FAMILY',
@@ -1119,31 +1168,35 @@ def combine_ship_build(df, ship_df, today_date, mon_date,
         WR_Final['MPA SITE'] = WR_Final['MPA SITE'].fillna('CANON')
     if ink_exe_bool or laser_exe_bool:
         WR_Final = WR_Final.rename(
-            columns={'TPO_LA_CONF_DELIVERY_DATE_POR':'TPO_REQUESTED_DELIVERY_MONTH_POR',
-                     'PLATFORM':'PLTFRM_NM'})
+            columns={'TPO_LA_CONF_DELIVERY_DATE_POR': 'TPO_REQUESTED_DELIVERY_MONTH_POR',
+                     'PLATFORM': 'PLTFRM_NM'})
     return WR_Final
 
 # %% TV DASHBOARD
+
+
 def create_date_query():
     week_range = pd.date_range(start='11/8/2022', periods=480, freq='W')
     date_df = pd.DataFrame({'CAL_WK_DT': week_range})
-    
+
     date_df = convert_date_week(date_df, 'CAL_WK_DT', 'CAL_WK_DT')
-    
+
     date_df['CYCLE_WK_NM'] = date_df['CAL_WK_DT'].dt.isocalendar()['week']
     date_df['CYCLE_WK_NM'] = date_df['CYCLE_WK_NM'].astype(str)
     date_df['CYCLE_WK_NM'] = date_df['CYCLE_WK_NM'].str.zfill(2)
     date_df['CYCLE_WK_NM'] = date_df['CAL_WK_DT'].dt.year.astype(str) + '-W' + \
         date_df['CYCLE_WK_NM']
-    
+
     # QUERY POR week only to get QUERY_POR_CYCLE
     date_df['QUERY_POR_WK'] = date_df['CAL_WK_DT'] - pd.DateOffset(weeks=1)
-    date_df['QUERY_POR_WK_NUM'] = date_df['QUERY_POR_WK'].dt.isocalendar()['week']
+    date_df['QUERY_POR_WK_NUM'] = date_df['QUERY_POR_WK'].dt.isocalendar()[
+        'week']
     date_df['QUERY_POR_WK_NUM'] = date_df['QUERY_POR_WK_NUM'].astype(str)
     date_df['QUERY_POR_WK_NUM'] = date_df['QUERY_POR_WK_NUM'].str.zfill(2)
     date_df['QUERY_POR_CYCLE'] = date_df['QUERY_POR_WK'].dt.strftime('%Y-W') + \
         date_df['QUERY_POR_WK_NUM']
     return date_df
+
 
 def query_por(por_df, date_df):
     por_query_df = date_df.merge(por_df, how='left',
@@ -1155,6 +1208,7 @@ def query_por(por_df, date_df):
     por_query_df = por_query_df.dropna()
     return por_query_df
 
+
 def map_por_region(query_df, region_df):
     query_df = query_df.merge(region_df,
                               how='left',
@@ -1162,25 +1216,27 @@ def map_por_region(query_df, region_df):
                               right_on=['DC_IC_PO_Plant'])
     return query_df
 
+
 def group_por(query_df):
     query_df = query_df.groupby([
         'CAL_WK_DT', 'LOC_FROM_NM', 'REGION',
-        'FAMILY_NM', 'PLTFRM_NM', 'BUS_UNIT_NM', 'PART_NR'],dropna=False)['QTY'].sum().reset_index()
+        'FAMILY_NM', 'PLTFRM_NM', 'BUS_UNIT_NM', 'PART_NR'], dropna=False)['QTY'].sum().reset_index()
     return query_df
+
 
 def tv_pct(df):
     df['% TPO'] = df['TPO_QTY'] / \
         df['QTY']
     df['% Shipped'] = df['TPO_LA_QTY'] / \
         df['TPO_QTY']
-    df[['% TPO','% Shipped']] = df[['% TPO','% Shipped']].fillna(0)
+    df[['% TPO', '% Shipped']] = df[['% TPO', '% Shipped']].fillna(0)
     # OVERWRITE MORE THAN 100% TO 100%
     df.loc[df['% TPO'] >= 1, '% TPO'] = 1
     # MEET TARGET
     df.loc[df['% TPO'] >= 0.9, 'Meet Target TPO'] = 1
     df.loc[df['% TPO'] < 0.5, 'Meet Target TPO'] = 2
     df.loc[df['Meet Target TPO'].isnull(),
-                       'Meet Target TPO'] = 3
+           'Meet Target TPO'] = 3
 
     # OVERWRITE MORE THAN 100% TO 100%
     df.loc[df['% Shipped'] >= 1, '% Shipped'] = 1
@@ -1188,21 +1244,23 @@ def tv_pct(df):
     df.loc[df['% Shipped'] >= 0.9, 'Meet Target Ship'] = 1
     df.loc[df['% Shipped'] < 0.5, 'Meet Target Ship'] = 2
     df.loc[df['Meet Target Ship'].isnull(),
-                       'Meet Target Ship'] = 3
+           'Meet Target Ship'] = 3
     return df
-    
+
+
 def tv_fam_group(df):
     # INKJET OEM PRODUCTS WITHOUT CAT_SUB BUT WITH TV_FAMILY, DROP THEM
     cat_df_grouped = df.groupby([
         'BU', 'MPA', 'PLTFRM_NM', 'TV_FAMILY', 'BUS_UNIT_NM',
-        'CAT_NM', 'CAT_SUB'], dropna=False) \
-        [['QTY', 'TPO_QTY', 'TPO_LA_QTY']].sum().reset_index()
+        'CAT_NM', 'CAT_SUB'], dropna=False)[['QTY', 'TPO_QTY', 'TPO_LA_QTY']].sum().reset_index()
     cat_df_grouped = tv_pct(cat_df_grouped)
     return cat_df_grouped
 
 # =============================================================================
 # COMBINE POR, TRADE PO AND SHIP
 # =============================================================================
+
+
 def combine_all_data(tpo_data, por_data, family_df, planning_df):
     tpo_grouped = tpo_data.groupby(
         ['BU',
@@ -1256,8 +1314,6 @@ def combine_all_data(tpo_data, por_data, family_df, planning_df):
                     'SKU'] = \
         por_ship_df['PART_NR']
 
-    
-
     # FILL EMPTY QUANTITY WITH 0
     por_ship_df[['QTY', 'TPO_QTY', 'TPO_LA_QTY']] = \
         por_ship_df[['QTY', 'TPO_QTY', 'TPO_LA_QTY']].fillna(0)
@@ -1275,14 +1331,13 @@ def combine_all_data(tpo_data, por_data, family_df, planning_df):
         family_df, how='left', on=['MPA', 'PLTFRM_NM'])
 
     por_ship_df = convert_date_month(por_ship_df,
-                                        'TPO_REQUESTED_DELIVERY_MONTH_POR',
-                                        'TPO_REQUESTED_DELIVERY_DATE')
+                                     'TPO_REQUESTED_DELIVERY_MONTH_POR',
+                                     'TPO_REQUESTED_DELIVERY_DATE')
 
     por_ship_df = convert_fy(por_ship_df,
-                                'TPO_REQUESTED_DELIVERY_Q_POR',
-                                'TPO_REQUESTED_DELIVERY_MONTH_POR',
-                                'Q-OCT', 'FY_YEAR')
-
+                             'TPO_REQUESTED_DELIVERY_Q_POR',
+                             'TPO_REQUESTED_DELIVERY_MONTH_POR',
+                             'Q-OCT', 'FY_YEAR')
 
     por_ship_df = por_ship_df.merge(planning_df,
                                     how='left',
@@ -1291,9 +1346,11 @@ def combine_all_data(tpo_data, por_data, family_df, planning_df):
     return por_ship_df
 
 # %% LASER TRADE PO VS CRP (PREVIOUS REQUIREMENT)
-def crp_tpo_clean(df,lastwk_mon_date):
-     df.loc[
-         df['TPO_Requested_Delivery_Date'] < df['TPO_Created_On'],
-         'TPO_Requested_Delivery_Date'] = df['TPO_Created_On']
-     df = df.loc[df['TPO_Requested_Delivery_Date'] >= lastwk_mon_date].copy()
-     return df
+
+
+def crp_tpo_clean(df, lastwk_mon_date):
+    df.loc[
+        df['TPO_Requested_Delivery_Date'] < df['TPO_Created_On'],
+        'TPO_Requested_Delivery_Date'] = df['TPO_Created_On']
+    df = df.loc[df['TPO_Requested_Delivery_Date'] >= lastwk_mon_date].copy()
+    return df
