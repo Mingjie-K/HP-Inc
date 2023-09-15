@@ -617,10 +617,10 @@ ink_po_exe_df, ink_ship_exe_df = fm.po_ship(
 laser_po_df, laser_ship_df = fm.po_ship(laser_added)
 hpps_po_df, hpps_ship_df = fm.po_ship(hpps_added)
 fxnwhl_po_df, fxnwhl_ship_df = fm.po_ship(fxnwhl_added)
-canon_po_df, canon_ship_df = fm.po_ship(TPO_Cum_Canon)
+canon_ship_df = fm.canon_po_ship(TPO_Cum_Canon)
 
 po_list = [ink_po_df, ink_po_exe_df, laser_po_df,
-           hpps_po_df, fxnwhl_po_df, canon_po_df]
+           hpps_po_df, fxnwhl_po_df]
 ship_list = [ink_ship_df, ink_ship_exe_df, laser_ship_df,
              hpps_ship_df, fxnwhl_ship_df, canon_ship_df]
 
@@ -658,8 +658,8 @@ hpps_month = fm.combine_po_ship(
     hpps_po_df, hpps_ship_df, today, 'Q-AUG', False)
 fxnwhl_month = fm.combine_po_ship(
     fxnwhl_po_df, fxnwhl_ship_df, today, 'Q-AUG', False)
-canon_month = fm.combine_po_ship(
-    canon_po_df, canon_ship_df, today, 'Q-AUG', False)
+canon_month = fm.canon_combine_po_ship(
+    canon_ship_df, today, 'Q-AUG')
 # Remove null MPA for CANON as no delivery
 canon_month = canon_month.loc[~canon_month['MPA'].isnull()].copy()
 
