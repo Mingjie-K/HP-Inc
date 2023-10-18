@@ -1291,7 +1291,7 @@ por_ship_df = por_ship_df.loc[
 laser_por_ship = por_ship_df.loc[
     (por_ship_df['BU'] == 'Laser')
     & (por_ship_df['MPA'] != 'Laser Foxconn Weihai')
-    & (~por_ship_df['MPA'].str.contains('Canon'))].copy()
+    & (~por_ship_df['MPA'].str.contains('Canon', na=False))].copy()
 # =============================================================================
 # OVERWRITE CATEGORIZATION FOR INKJET
 # =============================================================================
