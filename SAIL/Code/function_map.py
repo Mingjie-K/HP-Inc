@@ -1220,7 +1220,7 @@ def map_por_region(query_df, region_df):
 def group_por(query_df):
     query_df = query_df.groupby([
         'CAL_WK_DT', 'LOC_FROM_NM', 'REGION',
-        'FAMILY_NM', 'PLTFRM_NM', 'BUS_UNIT_NM', 'PART_NR'], dropna=False)['QTY'].sum().reset_index()
+        'PLTFRM_NM', 'BUS_UNIT_NM', 'PART_NR'], dropna=False)['QTY'].sum().reset_index()
     return query_df
 
 
@@ -1320,7 +1320,7 @@ def combine_all_data(tpo_data, por_data, family_df, planning_df):
 
     # DROP IRRELEVANT COLUMNS
     por_ship_df = por_ship_df.drop(columns=['CAL_WK_DT', 'LOC_FROM_NM',
-                                            'FAMILY_NM', 'PLTFRM_NM_x',
+                                            'PLTFRM_NM_x',
                                             'BUS_UNIT_NM_x', 'PART_NR'])
 
     # STRIP _y AT THE RIGHT FOR COLUMN NAMING
