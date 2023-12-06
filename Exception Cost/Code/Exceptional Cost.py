@@ -80,11 +80,11 @@ if x == 'Y':
 
     PR_df = pd.read_excel(filename, sheet_name='Sheet1')
     # Remove intercompany bill
-    PR_df = PR_df.loc[PR_df['IC bill/Not Required/Reclass']
-                      != 'IC bill'].copy()
+    PR_df = PR_df.loc[PR_df['IC bill/Not Required/Reclass'].str.upper()
+                      != 'IC BILL'].copy()
     # Remove status that are cancelled
-    PR_df = PR_df.loc[PR_df['Status'].isin(
-        ['Approved for payment', 'Closed (Invoice issued)'])].copy()
+    PR_df = PR_df.loc[PR_df['Status'].str.upper().isin(
+        ['APPROVED FOR PAYMENT', 'CLOSED (INVOICE ISSUED)'])].copy()
     # uni_quarter = PR_df['Fiscal Quarter'].unique()
 
     def filter_df(df):
@@ -94,7 +94,7 @@ if x == 'Y':
         # current_quarter = find_last['Quarter']
         # Recover Past Data
         # current_month = datetime(2022, 12, 1)
-        # current_month = datetime(2023, 11, 1)-relativedelta(months=1)
+        # current_month = datetime(2023, 10, 1)-relativedelta(months=1)
         current_month = datetime.today() - relativedelta(months=1)
         current_month = current_month.replace(
             day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -107,23 +107,31 @@ if x == 'Y':
             # today_str = today.strftime('%Y-%m-01')
             current_FY = month_df.loc[month_df['Month'].isin(
                 [today_str, current_month_date])]['FY'].unique()
+            ori_fy = month_df.loc[month_df['FY'].isin(
+                current_FY)]['Quarter'].unique()
             current_FY = month_df.loc[month_df['FY'].isin(
                 current_FY)]['Quarter'].unique()
-            budget_FY = current_FY
-            previous_FY = current_FY[0:3]
-            current_FY = current_FY[3:]
+            budget_FY = current_FY[3:]
+            previous_FY = current_FY[3]
+            current_FY = current_FY[4:]
             df = df.loc[(df['Fiscal Quarter'].isin(current_FY))
                         & (df['Fiscal Quarter'].notnull())
                         ].copy()
             os.chdir(db_pr_dir)
+            # CHECK FOR FILE
+            check_name = current_month.strftime('%Y%m_') + 'PRTracker.xlsx'
+            if os.path.exists(check_name):
+                os.remove(check_name)
+                time.sleep(1)
             xlsx_files = glob.glob(db_pr_dir + '/*' + '.xlsx')
             latest_xlsx = max(xlsx_files, key=os.path.getctime)
             filename = latest_xlsx.split('\\')[-1]
             hist_df = pd.read_excel(filename, sheet_name='Sheet1')
-            hist_df = hist_df.loc[(hist_df['Fiscal Quarter'].isin(previous_FY))
+            hist_df = hist_df.loc[(hist_df['Fiscal Quarter'].isin([previous_FY]))
                                   & (hist_df['Fiscal Quarter'].notnull())
                                   ].copy()
             os.chdir(pr_tracker_dir)
+            df = pd.concat([hist_df, df], ignore_index=True)
         elif (current_month.month >= 4 and current_month.month <= 6):
             current_FY = month_df.loc[month_df['Month'].isin(
                 [current_month_date])]['FY'].unique()
@@ -254,6 +262,7 @@ if x == 'Y':
 
     Budget_df = pd.read_excel('ExceptionCost_Tool.xlsx',
                               sheet_name='Budget', skiprows=1)
+    Budget_df = Budget_df.loc[Budget_df['MPA'].notnull()].copy()
     Budget_df['Cost Type'] = Budget_df['Cost Type'].str.upper()
 
     Budget_Col = Budget_df.columns[2:]
