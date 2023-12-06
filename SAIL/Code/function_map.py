@@ -17,7 +17,9 @@ ink_por_naming = {'JABIL WEIHAI': 'INK Jabil Weihai',
                   'Flex PTP Malaysia': 'INK Flex PTP Malaysia',
                   'Flex Zhuhai': 'INK Flex Zhuhai',
                   'Foxconn ChongQing': 'INK Foxconn ChongQing',
-                  'FOXCONN WEIHAI': 'INK Foxconn Weihai'}
+                  'FOXCONN WEIHAI': 'INK Foxconn Weihai',
+                  'CALCOMP TH': 'INK NKG Thailand',
+                  'CALCOMP YY':'INK NKG Yue Yang'}
 
 laser_por_naming = {'HP FOXCONN PARDUBICE MFG(SG31)': 'Laser Foxconn Czech',
                     'JABIL CHIHUAHUA': 'Laser Jabil Chihuahua',
