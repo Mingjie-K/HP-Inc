@@ -38,10 +38,10 @@ ab_df = pd.read_csv('AB_Dates.csv',
                     parse_dates=['First_AB_PO', 'Last_AB_Line',
                                  'First_AB_Line'])
 # SharePoint Path
-project_func_path = os.path.join(
-    user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Code')
+# project_func_path = os.path.join(
+#     user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Code')
 # Troubleshoot Path
-# project_func_path = os.path.join(user, 'OneDrive - HP Inc\Projects\SAIL\Code')
+project_func_path = os.path.join(user, 'OneDrive - HP Inc\Projects\SAIL\Code')
 os.chdir(project_func_path)
 
 # Change directory to import neccessary module
@@ -225,6 +225,34 @@ def read_week_build(user, folder):
         por_df = pd.concat([por_df, df], ignore_index=True)
     return por_df
 
+# =============================================================================
+# CANON HW BUILD
+# =============================================================================
+def read_build_canon(filename, sheet, skip):
+    df = pd.read_excel(filename,
+                       sheet_name=sheet,
+                       dtype={'CYCLE_WK_NM': str,
+                              'LOC_TO_CD': str,
+                              'LOC_FROM_NM': str,
+                              'FAMILY_NM': str,
+                              'PLTFRM_NM': str,
+                              'BUS_UNIT_NM': str,
+                              'PART_NR': str},
+                       skiprows=skip)
+    df = df.fillna(0)
+    Dates = df.columns[7:]
+    Col = df.columns[0:7]
+
+    latest_build = pd.melt(df,
+                           id_vars=Col,
+                           value_vars=Dates,
+                           value_name='QTY',
+                           var_name='CAL_WK_DT')
+    latest_build['CAL_WK_DT'] = pd.to_datetime(latest_build['CAL_WK_DT'],
+                                               format='%m/%d/%y')
+
+    return latest_build
+
 # %% Functions to export data
 
 
@@ -379,6 +407,12 @@ canon_ffgi_por_df['CATEGORY'] = 'CANON FFGI'
 
 canon_dataset = fm.map_mpa(canon_dataset, laser_mpa_map)
 
+canon_eng_por_df = read_por('CANON\CANON ENGINE AND TONER')
+canon_eng_por_df['LOC_FROM_NM'] = 'Laser Canon'
+canon_eng_por_df = canon_eng_por_df.loc[
+    canon_eng_por_df['PROD_TYPE_CD'] == 'PRE'].copy()
+canon_eng_por_df['CATEGORY'] = 'CANON ENGINE'
+
 
 # =============================================================================
 # ORIGINAL
@@ -390,7 +424,7 @@ ink_df, ink_df_cum = fm.data_cleaning(
 hpps_df, hpps_df_cum = fm.data_cleaning(
     hpps_dataset, True, False, True, ship_point)
 fxnwhl_df, fxnwhl_df_cum = fm.data_cleaning(
-    fxnwhl_dataset, True, False, False, None)
+    fxnwhl_dataset, False, False, False, None)
 canon_df, canon_df_cum = fm.data_cleaning(
     canon_dataset, False, True, False, None)
 
@@ -534,11 +568,20 @@ TPO_Canon_Final, Canon_POR_grouped = \
     fm.canon_shipment_data(canon_df, False,
                            canon_etd_path, canon_ffgi_por_df)
 
+# DROP TPO PLANT
+TPO_Canon_Final = TPO_Canon_Final.drop(columns=['TPO_Plant'])
+
 TPO_Cum_Canon, Canon_POR_grouped = \
     fm.canon_shipment_data(canon_df_cum, True,
                            canon_etd_path, canon_ffgi_por_df)
+    
+# ENGINE
+TPO_Canon_Eng_Final, Canon_Eng_POR_grouped = \
+    fm.canon_shipment_data(canon_df, False, 
+                           canon_etd_path, canon_eng_por_df)
 
-canon_tpo_list = [TPO_Canon_Final, TPO_Cum_Canon]
+
+canon_tpo_list = [TPO_Canon_Final, TPO_Cum_Canon, TPO_Canon_Eng_Final]
 for df in canon_tpo_list:
     df = fm.convert_date_week(df,
                               'TPO_LA_Conf_Delivery_Date_POR',
@@ -559,6 +602,23 @@ TPO_Cum_Canon = fm.shipment_por_skus(TPO_Cum_Canon,
                                      Canon_POR_grouped,
                                      True)
 
+# MAP REGION WITH PLANT FOR ENGINE
+TPO_Canon_Eng_Final.loc[
+    TPO_Canon_Eng_Final['TPO_Plant'] == 'SG51', 'REGION'] = 'APJ'
+
+TPO_Canon_Eng_Final.loc[
+    TPO_Canon_Eng_Final['TPO_Plant'] == 'SG5E', 'REGION'] = 'AMS'
+
+TPO_Canon_Eng_Final.loc[
+    TPO_Canon_Eng_Final['TPO_Plant'] == 'SG5C', 'REGION'] = 'EMEA'
+
+# DROP TPO PLANT
+TPO_Canon_Eng_Final = TPO_Canon_Eng_Final.drop(columns=['TPO_Plant'])
+
+TPO_Canon_Eng_Final = fm.shipment_por_skus(TPO_Canon_Eng_Final,
+                                       Canon_Eng_POR_grouped,
+                                       False)
+
 
 TPO_Canon_Final = TPO_Canon_Final.rename(columns={'FAMILY_NM': 'FAMILY'})
 TPO_Cum_Canon = TPO_Cum_Canon.rename(columns={'FAMILY_NM': 'FAMILY'})
@@ -575,6 +635,15 @@ TPO_Cum_Canon['TPO_REF'] = TPO_Cum_Canon['TPO_LA_Reference'].str[:2]
 TPO_Cum_Canon['TPO_PO_Vendor_Name'] = TPO_Cum_Canon['TPO_REF'].map(
     canon_site_dict)
 TPO_Cum_Canon = TPO_Cum_Canon.drop(columns=['TPO_REF'])
+
+# ENGINE
+TPO_Canon_Eng_Final['TPO_REF'] = TPO_Canon_Eng_Final['TPO_LA_REFERENCE'].str[:2]
+TPO_Canon_Eng_Final['MPa'] = TPO_Canon_Eng_Final['TPO_REF'].map(canon_site_dict)
+TPO_Canon_Eng_Final = TPO_Canon_Eng_Final.drop(columns=['TPO_REF'])
+
+# REMOVE DALIAN
+TPO_Canon_Eng_Final = TPO_Canon_Eng_Final.loc[
+    TPO_Canon_Eng_Final['MPa'] != 'Canon CN, Dalian'].copy()
 
 # %% FULL SHIPMENT DATA
 
@@ -881,12 +950,17 @@ for mpa in laser_b_list:
 # FXN WH LASER (HW)
 fxnwhl_build_df = read_build('FXN WH LASER', False)
 
-# CANON
+# CANON FFGI
 canon_jp_build = read_build('CANON\CANON FFGI\JP', False)
 canon_ph_build = read_build('CANON\CANON FFGI\PH', False)
 canon_vn_build = read_build('CANON\CANON FFGI\VN', False)
 canon_zs_build = read_build('CANON\CANON FFGI\ZS', False)
 
+# CANON ENGINE
+canon_jp_e_build = read_build('CANON\CANON ENGINE\JP', False)
+canon_ph_e_build = read_build('CANON\CANON ENGINE\PH', False)
+canon_vn_e_build = read_build('CANON\CANON ENGINE\VN', False)
+canon_zs_e_build = read_build('CANON\CANON ENGINE\ZS', False)
 
 # REPLACE INK BUILD PLAN NAME
 ink_build_df['LOC_FROM_NM'] = ink_build_df['LOC_FROM_NM'].map(ink_por_naming)
@@ -902,46 +976,95 @@ canon_jp_build['LOC_FROM_NM'] = 'Canon JP'
 canon_ph_build['LOC_FROM_NM'] = 'Canon PH'
 canon_vn_build['LOC_FROM_NM'] = 'Canon VN'
 canon_zs_build['LOC_FROM_NM'] = 'Canon CN, Zhongshan'
+
+canon_jp_e_build['LOC_FROM_NM'] = 'Canon JP'
+canon_ph_e_build['LOC_FROM_NM'] = 'Canon PH'
+canon_vn_e_build['LOC_FROM_NM'] = 'Canon VN'
+canon_zs_e_build['LOC_FROM_NM'] = 'Canon CN, Zhongshan'
 canon_build_df = pd.concat([canon_jp_build, canon_ph_build,
                             canon_vn_build, canon_zs_build], ignore_index=True)
+
+canon_build_e_df = pd.concat([canon_jp_e_build, canon_ph_e_build,
+                            canon_vn_e_build, canon_zs_e_build], 
+                             ignore_index=True)
 
 WR_INK = fm.combine_ship_build(
     ink_build_df, TPO_Ink_Final, today, current_mon_date,
     region_map, sub_region_map, mpa_map, hpps_family, family_map,
-    False, None, False, False, False)
+    False, None, False, False, False, False)
 # INKJET EXECUTIVE
 WR_INK_EXE = fm.combine_ship_build(
     ink_build_df, TPO_Ink_Final, today, current_mon_date,
     region_map, sub_region_map, mpa_map, hpps_family, family_map,
-    False, None, False, True, False)
+    False, None, False, True, False, False)
 WR_LASER = fm.combine_ship_build(
     laser_build_df, TPO_Laser_Final, today, current_mon_date,
     region_map, sub_region_map, mpa_map, hpps_family, family_map,
-    False, None, False, False, False)
+    False, None, False, False, False, False)
 
 WR_FXNWHL = fm.combine_ship_build(
     fxnwhl_build_df, TPO_FXNWHL_Final, today, current_mon_date,
     region_map, sub_region_map, mpa_map, hpps_family, family_map,
-    True, 'Laser FXNWH HW', False, False, False)
+    True, 'Laser FXNWH HW', False, False, False, False)
 WR_CANON = fm.combine_ship_build(
     canon_build_df, TPO_Canon_Final, today, current_mon_date,
     region_map, sub_region_map, mpa_map, hpps_family, family_map,
-    False, None, True, False, False)
+    False, None, True, False, False, False)
 # LASER EXECUTIVE
 WR_LASER_EXE = fm.combine_ship_build(
     laser_build_df, TPO_Laser_Final, today, current_mon_date,
     region_map, sub_region_map, mpa_map, hpps_family, family_map,
-    False, None, False, False, True)
+    False, None, False, False, True, False)
 
 WR_FXNWHL_EXE = fm.combine_ship_build(
     fxnwhl_build_df, TPO_FXNWHL_Final, today, current_mon_date,
     region_map, sub_region_map, mpa_map, hpps_family, family_map,
-    True, 'Laser FXNWH HW', False, False, True)
+    True, 'Laser FXNWH HW', False, False, True, False)
 WR_CANON_EXE = fm.combine_ship_build(
     canon_build_df, TPO_Canon_Final, today, current_mon_date,
     region_map, sub_region_map, mpa_map, hpps_family, family_map,
-    False, None, True, False, True)
+    False, None, True, False, True, False)
 
+# FOR CANON HW
+CANON_FFGI = fm.combine_ship_build(
+    canon_build_df, TPO_Canon_Final, today, current_mon_date,
+    region_map, sub_region_map, mpa_map, hpps_family, family_map,
+    False, None, True, False, False, True)
+
+# RENAME FAMILY_NM FOR ENGINE
+TPO_Canon_Eng_Final = TPO_Canon_Eng_Final.rename(
+    columns={'FAMILY_NM': 'FAMILY'})
+CANON_ENGINE = fm.combine_ship_build(
+    canon_build_e_df, TPO_Canon_Eng_Final, today, current_mon_date,
+    region_map, sub_region_map, mpa_map, hpps_family, family_map,
+    False, None, True, False, False, True)
+
+CANON_FFGI['CATEGORY'] = 'CANON FFGI'
+CANON_ENGINE['CATEGORY'] = 'CANON ENGINE'
+# ADD POR WEEK TO CANON REPORT
+
+por_wk_canon_fg = canon_build_df[['LOC_FROM_NM','CYCLE_WK_NM']].drop_duplicates()
+por_wk_canon_eng = canon_build_e_df[['LOC_FROM_NM','CYCLE_WK_NM']].drop_duplicates()
+
+CANON_FFGI = CANON_FFGI.merge(por_wk_canon_fg, how='left', 
+                 left_on=['MPa'], 
+                 right_on=['LOC_FROM_NM'])
+CANON_ENGINE = CANON_ENGINE.merge(por_wk_canon_eng, how='left', 
+                 left_on=['MPa'], 
+                 right_on=['LOC_FROM_NM'])
+
+CANON_FFGI = CANON_FFGI.drop(columns=['LOC_FROM_NM'])
+CANON_ENGINE = CANON_ENGINE.drop(columns=['LOC_FROM_NM'])
+
+CANON_FINAL = pd.concat([CANON_FFGI,CANON_ENGINE],ignore_index=True)
+CANON_FINAL = fm.convert_fy(CANON_FINAL, 'QUARTER', 
+                            'TPO_LA_CONF_DELIVERY_DATE_POR', 'Q-OCT', 'YEAR_FY')
+# ADD CALENDAR YEAR
+CANON_FINAL['YEAR_CY'] = CANON_FINAL['TPO_LA_CONF_DELIVERY_MONTH_POR'].dt.year
+
+CANON_FINAL = CANON_FINAL.loc[
+    (CANON_FINAL['YEAR_FY'] != '2021') & 
+    (CANON_FINAL['YEAR_FY'] != '2022')].copy()
 # REMOVE WR_HPPS
 WR_FINAL = pd.concat([WR_INK, WR_LASER, WR_FXNWHL,
                       WR_CANON], ignore_index=True)
@@ -1016,6 +1139,7 @@ cycle_ref_df['REF_POR_NAME'] = 'Reference to ' + \
 
 cycle_ref_df = cycle_ref_df.rename(columns={'LOC_FROM_NM': 'MPa'})
 WR_bu_df = fm.unique_table(cycle_ref_df, ['BU'])
+
 
 # %% SHIPMENT VS POR
 
@@ -1146,8 +1270,9 @@ current_fy_text = 'FY' + current_fy
 title_df = pd.DataFrame({'current_fy': [current_fy_text]})
 ink_latest_cycle = cycle_ref_df.loc[
     cycle_ref_df['BU'] == 'Inkjet']['CYCLE_WK_NM'].unique().item()
+# CHANGE TO MAX FIRST
 laser_latest_cycle = cycle_ref_df.loc[
-    cycle_ref_df['BU'] == 'Laser']['CYCLE_WK_NM'].unique().item()
+    cycle_ref_df['BU'] == 'Laser']['CYCLE_WK_NM'].max()
 title_df['Latest POR'] = ink_latest_cycle + ' POR'
 title_df['BU'] = 'Inkjet'
 laser_row = pd.DataFrame([{'current_fy': current_fy_text,
@@ -1168,6 +1293,8 @@ laser_tv = fm.convert_fy(laser_month_exe, 'QUARTER',
 
 laser_tv = fm.quarter_year_name(laser_tv, 'QUARTER', 'QUARTER_YEAR',
                                 'QUARTER_NAME', 'FY_NAME')
+# ADD FOR PAST FY DATA TILL DATE
+laser_tv_fy = laser_tv.copy()
 # GET CURRENT FY DATA
 laser_tv = laser_tv.loc[laser_tv['QUARTER_YEAR'] == current_fy].copy()
 # REMOVE ACC AND TONER FOR LASER
@@ -1175,6 +1302,11 @@ laser_tv = laser_tv.loc[
     (laser_tv['CATEGORY'] != 'Laser FXNWH ACC')
     & (laser_tv['CATEGORY'] != 'Laser FXNWH TONER')].copy()
 
+laser_tv_fy = laser_tv_fy.loc[
+    (laser_tv_fy['CATEGORY'] != 'Laser FXNWH ACC')
+    & (laser_tv_fy['CATEGORY'] != 'Laser FXNWH TONER')].copy()
+# ADD FOR PAST FY DATA TILL DATE
+ink_tv_fy = ink_month_exe.copy()
 ink_tv = ink_month_exe.loc[ink_month_exe['QUARTER_YEAR'] == current_fy].copy()
 
 # DROP COLUMNS NOT IN USE
@@ -1188,7 +1320,13 @@ laser_tv = fm.combine_cols(laser_tv, ['BU', 'MPA', 'REGION', 'FAMILY', 'PLTFRM_N
                            'COMBINED')
 ink_tv = fm.combine_cols(ink_tv, ['BU', 'MPA', 'REGION', 'FAMILY', 'PLTFRM_NM'],
                          'COMBINED')
+laser_tv_fy = fm.combine_cols(laser_tv_fy, ['BU', 'MPA', 'REGION', 'FAMILY', 'PLTFRM_NM'],
+                           'COMBINED')
+ink_tv_fy = fm.combine_cols(ink_tv_fy, ['BU', 'MPA', 'REGION', 'FAMILY', 'PLTFRM_NM'],
+                         'COMBINED')
 all_tv = pd.concat([ink_tv, laser_tv], ignore_index=True)
+# ADD FOR FY
+all_tv_fy = pd.concat([ink_tv_fy, laser_tv_fy], ignore_index=True)
 
 all_tv_rel = fm.unique_table(all_tv,
                              ['BU', 'MPA', 'REGION', 'FAMILY', 'PLTFRM_NM', 'COMBINED'])
@@ -1198,6 +1336,7 @@ Combined_Relationship = pd.concat([all_tv_rel, COMBINED_PORWSHIP_rel],
                                   ignore_index=True)
 Combined_Relationship = fm.unique_table(Combined_Relationship,
                                         ['BU', 'MPA', 'REGION', 'FAMILY', 'PLTFRM_NM', 'COMBINED'])
+
 # =============================================================================
 # POR ROLLUP
 # =============================================================================
@@ -1278,11 +1417,13 @@ canon_query_df = fm.group_por(canon_query_df)
 # COMBINE ALL PORS
 por_query_df = pd.concat([ink_query_df, laser_query_df, canon_query_df],
                          ignore_index=True)
-
+plan_cat_df = plan_cat_df.drop_duplicates(subset=['PART_NR'],keep='last')
 por_ship_df = fm.combine_all_data(
     all_tv, por_query_df, family_map, plan_cat_df)
 
 
+all_tv_fy = all_tv_fy.merge(plan_cat_df, how='left', left_on='SKU', right_on='PART_NR')
+all_tv_fy = all_tv_fy.drop(columns=['PART_NR'])
 # ONLY GET DATA TILL LATEST POR DATA
 por_ship_df = por_ship_df.loc[
     por_ship_df['TPO_REQUESTED_DELIVERY_DATE'] <= current_mon_date].copy()
@@ -1323,14 +1464,16 @@ por_ship_df.loc[
 por_ship_df = por_ship_df.loc[~(
     por_ship_df['CAT_SUB'].str.contains('ACCES|SUPPL|LASERJET LLC'))].copy()
 
-
+all_tv_fy = all_tv_fy.loc[~(
+    all_tv_fy['CAT_SUB'].str.contains('ACCES|SUPPL|LASERJET LLC'))].copy()
 # =============================================================================
 # REMOVE PLATFORM ACCESSORIES, AV-, UNKNOWN AND FLEXBUILD FROM DATA
 # =============================================================================
 por_ship_df = por_ship_df.loc[
     ~por_ship_df['PLTFRM_NM'].str.contains('ACCESSOR|AV-|UNKNOWN|FLEXBUILD-')].copy()
 
-
+all_tv_fy = all_tv_fy.loc[
+    ~all_tv_fy['PLTFRM_NM'].str.contains('ACCESSOR|AV-|UNKNOWN|FLEXBUILD-')].copy()
 # =============================================================================
 # TV FAMILY MAPPING TO MAIN DATA por_ship_df
 # =============================================================================
@@ -1355,6 +1498,7 @@ por_ship_df = por_ship_df.drop(columns=['PART_NR'])
 
 # OUTPUT FIRST FOR MAP AS OVERWRITE WILL DELETE COORDINATES
 output_csv('Executive', por_ship_df, 'POR_SHIP_TPO')
+output_csv('Executive', all_tv_fy, 'SHIP_FY_DATA')
 output_pq('Executive', por_ship_df, 'POR_SHIP_TPO')
 
 por_ship_df['MPA'] = por_ship_df['MPA'].replace(fm.canon_short_naming)
@@ -1818,6 +1962,8 @@ tv_file_names = ['Inkjet_Current_Mth', 'Inkjet_CAT', 'Laser_Current_Mth',
                  'Laser_CAT', 'W_POR_SHIP_TPO', 'QTD_POR_SHIP_TPO',
                  'Combined Title', 'Combined Data', 'Combined Relationship',
                  'Combined PorwShip']
+# CANON HW
+output_pq('Canon HW', CANON_FINAL, 'Canon HW')
 # LASER CRP
 output_pq('Laser CRP', laser_crp_df, 'Laser CRP')
 
@@ -1843,6 +1989,8 @@ for df, filename in zip(tv_names, tv_file_names):
     output_pq('Executive', df, filename)
 
 # %% CSV
+# CANON HW
+output_csv('Canon HW', CANON_FINAL, 'Canon HW')
 # LASER CRP
 output_csv('Laser CRP', laser_crp_df, 'Laser CRP')
 # SHIPMENT

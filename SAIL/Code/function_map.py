@@ -306,7 +306,7 @@ def data_cleaning(dataset, hpps_bool, canon_bool, ship_bool, hpps_ship_point):
              'IC_SO_To_Factory_Ship_To_Name',
              'DC_IC_PO_Plant'])[['TPO_LA_Qty', 'TPO_GR_Qty']].sum().reset_index()
 
-    # Copy
+    # REPLACED COPY WITH 0
         dataset.loc[dataset.duplicated(
             ['TPO_PO_Vendor_Code',
              'TPO_PO_Vendor_Name', 'Trade_PO',
@@ -326,7 +326,7 @@ def data_cleaning(dataset, hpps_bool, canon_bool, ship_bool, hpps_ship_point):
              'Trade_PO_Status',
              'IC_SO_To_Factory_Ship_To_Name'],
             keep=False),
-            ['TPO_Qty']] = dataset['TPO_LA_Qty']
+            ['TPO_Qty']] = np.nan
     else:
         dataset_cum = dataset_cum.groupby(
             ['TPO_PO_Vendor_Name',
@@ -434,6 +434,7 @@ def data_cleaning(dataset, hpps_bool, canon_bool, ship_bool, hpps_ship_point):
             ['TPO_Qty']] = dataset['TPO_LA_Qty']
 
     dataset['TPO_Qty'] = dataset['TPO_Qty'].fillna(0)
+    dataset_cum['TPO_Qty'] = dataset_cum['TPO_Qty'].fillna(0)
 
     return dataset, dataset_cum
 
@@ -560,7 +561,7 @@ def canon_shipment_data(dataset, cum_bool, etd_path, por_df):
     else:
         df_grouped = dataset.groupby(
             ['TPO_Requested_Delivery_Date',
-             'TPO_LA_Reference',
+             'TPO_LA_Reference','TPO_Plant',
              'MPA Site', 'BU',
              'TPO_LA_Inbound_Delivery_No',
              'TPO_LA_Conf_Delivery_Date',
@@ -624,24 +625,53 @@ def canon_shipment_data(dataset, cum_bool, etd_path, por_df):
                                         'Trade_PO',
                                         'TPO_Material',
                                         'TPO_LA_Inbound_Delivery_No'])
+    if cum_bool:
 
-    # Replace TPO_LA_Conf_Delivery_Date with SAP DATE
-    canon_merged['TPO_LA_Conf_Delivery_Date'] = \
-        canon_merged['TPOLATABLE_IBP_ETD_FACTORY']
-    canon_merged = canon_merged[['TPO_Requested_Delivery_Date', 'TPO_LA_Reference',
-                                 'MPA Site', 'BU', 'REGION', 'Sub_Region',
-                                 'TPO_LA_Conf_Delivery_Date', 'TPO_PO_Vendor_Code',
-                                 'TPO_PO_Vendor_Name', 'Trade_PO', 'TPO_Material',
-                                 'DC_IC_PO_Plant', 'TPO_Qty_x', 'TPO_LA_Qty_x']]
-
+        # Replace TPO_LA_Conf_Delivery_Date with SAP DATE
+        canon_merged['TPO_LA_Conf_Delivery_Date'] = \
+            canon_merged['TPOLATABLE_IBP_ETD_FACTORY']
+        canon_merged = canon_merged[['TPO_Requested_Delivery_Date', 
+                                     'TPO_LA_Reference',
+                                     'MPA Site', 'BU', 'REGION', 'Sub_Region',
+                                     'TPO_LA_Conf_Delivery_Date', 'TPO_PO_Vendor_Code',
+                                     'TPO_PO_Vendor_Name', 'Trade_PO', 'TPO_Material',
+                                     'DC_IC_PO_Plant', 'TPO_Qty_x', 'TPO_LA_Qty_x']]
+        # FFILL MISSING DATE COLUMN
+        canon_merged['TPO_LA_Conf_Delivery_Date'] = \
+            canon_merged.groupby(
+                ['TPO_Requested_Delivery_Date', 
+                 'MPA Site', 'BU',
+                 'TPO_PO_Vendor_Name', 'Trade_PO', 'TPO_Material',
+                 'REGION', 'Sub_Region',
+                 'DC_IC_PO_Plant'])['TPO_LA_Conf_Delivery_Date'].fillna(method='ffill')
+    else:
+        canon_merged['TPO_LA_Conf_Delivery_Date'] = \
+            canon_merged['TPOLATABLE_IBP_ETD_FACTORY']
+        canon_merged = canon_merged[['TPO_Requested_Delivery_Date', 'TPO_Plant',
+                                     'TPO_LA_Reference',
+                                     'MPA Site', 'BU', 'REGION', 'Sub_Region',
+                                     'TPO_LA_Conf_Delivery_Date', 'TPO_PO_Vendor_Code',
+                                     'TPO_PO_Vendor_Name', 'Trade_PO', 'TPO_Material',
+                                     'DC_IC_PO_Plant', 'TPO_Qty_x', 'TPO_LA_Qty_x']]
+        # FFILL MISSING DATE COLUMN
+        canon_merged['TPO_LA_Conf_Delivery_Date'] = \
+            canon_merged.groupby(
+                ['TPO_Requested_Delivery_Date', 'TPO_Plant',
+                 'MPA Site', 'BU',
+                 'TPO_PO_Vendor_Name', 'Trade_PO', 'TPO_Material',
+                 'REGION', 'Sub_Region',
+                 'DC_IC_PO_Plant', 'TPO_Qty_x'])['TPO_LA_Conf_Delivery_Date'].fillna(method='ffill')
+    
+    
+    
     # # # Copy
-    canon_merged.loc[
-        canon_merged.duplicated(['TPO_PO_Vendor_Name',
-                                 'TPO_Requested_Delivery_Date', 'TPO_PO_Vendor_Code',
-                                 'Trade_PO', 'TPO_Material',
-                                 'DC_IC_PO_Plant'], keep=False),
-        ['TPO_Qty_x']] = \
-        canon_merged['TPO_LA_Qty_x']
+    # canon_merged.loc[
+    #     canon_merged.duplicated(['TPO_PO_Vendor_Name',
+    #                              'TPO_Requested_Delivery_Date', 'TPO_PO_Vendor_Code',
+    #                              'Trade_PO', 'TPO_Material',
+    #                              'DC_IC_PO_Plant'], keep=False),
+    #     ['TPO_Qty_x']] = \
+    #     canon_merged['TPO_LA_Qty_x']
     # Group data again (No Group Vendor Code)
     if cum_bool:
         canon_final = canon_merged.groupby(
@@ -653,9 +683,10 @@ def canon_shipment_data(dataset, cum_bool, etd_path, por_df):
              'DC_IC_PO_Plant',
              'TPO_Qty_x'], dropna=False)['TPO_LA_Qty_x'].sum().reset_index()
     else:
+
         canon_final = canon_merged.groupby(
-            ['TPO_Requested_Delivery_Date',
-             'TPO_LA_Reference',
+            ['TPO_Requested_Delivery_Date', 'TPO_Plant',
+             'TPO_LA_Reference', 
              'TPO_LA_Conf_Delivery_Date', 'MPA Site', 'BU',
              'TPO_PO_Vendor_Name', 'Trade_PO', 'TPO_Material',
              'REGION', 'Sub_Region',
@@ -1018,7 +1049,7 @@ def combine_ship_build(df, ship_df, today_date, mon_date,
                        region, subregion, mpa,
                        hpps_fam, fam,
                        hpps_bool, hpps_hw_str, canon_bool, ink_exe_bool,
-                       laser_exe_bool):
+                       laser_exe_bool, canon_hw_bool):
     min_por_date = df['CAL_WK_DT'].min()
     if mon_date > min_por_date:
         get_date = mon_date
@@ -1082,6 +1113,9 @@ def combine_ship_build(df, ship_df, today_date, mon_date,
                               'TPO_LA_CONF_DELIVERY_MONTH_POR', 'Q-OCT', 'Year')
         WR_Final = WR_Final.loc[WR_Final['Year'] == current_fy].copy()
         WR_Final = WR_Final.drop(columns=['Quarter', 'Year'])
+        WR_Final['SHIP/POR'] = 'SHIP'
+        
+    elif canon_hw_bool:
         WR_Final['SHIP/POR'] = 'SHIP'
 
     else:
@@ -1207,7 +1241,7 @@ def query_por(por_df, date_df):
     por_query_df = por_query_df.drop(columns=['CYCLE_WK_NM_y'])
     por_query_df = por_query_df.rename(
         columns={'CYCLE_WK_NM_x': 'CYCLE_WK_NM'})
-    por_query_df = por_query_df.dropna()
+    por_query_df = por_query_df.dropna(subset=['PART_NR'])
     return por_query_df
 
 
