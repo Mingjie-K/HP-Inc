@@ -221,6 +221,7 @@ if x == 'Y':
                                       == current_month_date]['FY'].item()
             current_FY = month_df.loc[month_df['FY']
                                       == current_FY]['Quarter'].unique()
+            ori_fy = current_FY
             budget_FY = current_FY
             df = df.loc[(df['Fiscal Quarter'].isin(current_FY))
                         & (df['Fiscal Quarter'].notnull())
