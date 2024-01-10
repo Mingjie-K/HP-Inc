@@ -38,10 +38,10 @@ ab_df = pd.read_csv('AB_Dates.csv',
                     parse_dates=['First_AB_PO', 'Last_AB_Line',
                                  'First_AB_Line'])
 # SharePoint Path
-# project_func_path = os.path.join(
-#     user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Code')
+project_func_path = os.path.join(
+    user, 'HP Inc\PrintOpsDB - DB_DailyOutput\Code')
 # Troubleshoot Path
-project_func_path = os.path.join(user, 'OneDrive - HP Inc\Projects\SAIL\Code')
+# project_func_path = os.path.join(user, 'OneDrive - HP Inc\Projects\SAIL\Code')
 os.chdir(project_func_path)
 
 # Change directory to import neccessary module
