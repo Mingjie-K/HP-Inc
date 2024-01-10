@@ -15,7 +15,8 @@ import pandas as pd
 pd.set_option('display.max_columns', None)
 
 user = os.getenv('USERPROFILE')
-
+os.startfile("outlook")
+time.sleep(300)
 # %% INKJET
 # EXPORT DATA STARTS 1 MAR 2022 (CREATED ON)
 # =============================================================================
@@ -197,3 +198,7 @@ fxnwhi_zip_file.extract('Factory Purchase Order Report_V.csv',
 os.chdir(fxnwhi_csv_path)
 os.replace('Factory Purchase Order Report_V.csv',
            'Factory Purchase Order Report.csv')
+
+time.sleep(60)
+os.system('taskkill /im outlook.exe /f')
+os.system('reg add HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Office\\16.0\\Outlook\\Security\\ /v ObjectModelGuard /t REG_DWORD /d 2 /f')
