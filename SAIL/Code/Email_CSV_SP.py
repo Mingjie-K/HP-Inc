@@ -169,18 +169,18 @@ def output_csv(csv_path, data_csv_path, subject):
 # =============================================================================
 # INKJET
 # =============================================================================
-output_csv(nkgyy_csv_path, nkgyy_data_path, nkgyy_subject)
-output_csv(nkgth_csv_path, nkgth_data_path, nkgth_subject)
+output_csv(nkgyy_csv_path, None, nkgyy_subject)
+output_csv(nkgth_csv_path, None, nkgth_subject)
 output_csv(jwhi_csv_path, None, jwhi_subject)
 # =============================================================================
 # LASER
 # =============================================================================
-output_csv(jwhl_csv_path, jwhl_data_path, jwhl_subject)
-output_csv(fxnwhl_csv_path, fxnwhl_data_path, fxnwhl_subject)
-output_csv(jcuu_csv_path, jcuu_data_path, jcuu_subject)
-output_csv(fcz_csv_path, fcz_data_path, fcz_subject)
-output_csv(ceuro_csv_path, ceuro_data_path, ceuro_subject)
-output_csv(cusa_csv_path, cusa_data_path, cusa_subject)
+output_csv(jwhl_csv_path, None, jwhl_subject)
+output_csv(fxnwhl_csv_path, None, fxnwhl_subject)
+output_csv(jcuu_csv_path, None, jcuu_subject)
+output_csv(fcz_csv_path, None, fcz_subject)
+output_csv(ceuro_csv_path, None, ceuro_subject)
+output_csv(cusa_csv_path, None, cusa_subject)
 # =============================================================================
 # MOVE FXN WH FACTORY PURCHASE ORDER REPORT TO INKJET DIRECTORY
 # =============================================================================
