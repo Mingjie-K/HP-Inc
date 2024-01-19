@@ -625,6 +625,8 @@ def canon_shipment_data(dataset, cum_bool, etd_path, por_df):
                                         'Trade_PO',
                                         'TPO_Material',
                                         'TPO_LA_Inbound_Delivery_No'])
+    # ADDED SORT FOR MISSING DATA
+    # canon_merged = canon_merged.sort_values(['Trade_PO', 'TPO_Qty_x'], ascending=[False, False])
     if cum_bool:
 
         # Replace TPO_LA_Conf_Delivery_Date with SAP DATE
@@ -644,6 +646,13 @@ def canon_shipment_data(dataset, cum_bool, etd_path, por_df):
                  'TPO_PO_Vendor_Name', 'Trade_PO', 'TPO_Material',
                  'REGION', 'Sub_Region',
                  'DC_IC_PO_Plant'])['TPO_LA_Conf_Delivery_Date'].fillna(method='ffill')
+        canon_merged['TPO_LA_Conf_Delivery_Date'] = \
+            canon_merged.groupby(
+                ['TPO_Requested_Delivery_Date', 
+                 'MPA Site', 'BU',
+                 'TPO_PO_Vendor_Name', 'Trade_PO', 'TPO_Material',
+                 'REGION', 'Sub_Region',
+                 'DC_IC_PO_Plant'])['TPO_LA_Conf_Delivery_Date'].fillna(method='bfill')
     else:
         canon_merged['TPO_LA_Conf_Delivery_Date'] = \
             canon_merged['TPOLATABLE_IBP_ETD_FACTORY']
@@ -661,6 +670,13 @@ def canon_shipment_data(dataset, cum_bool, etd_path, por_df):
                  'TPO_PO_Vendor_Name', 'Trade_PO', 'TPO_Material',
                  'REGION', 'Sub_Region',
                  'DC_IC_PO_Plant', 'TPO_Qty_x'])['TPO_LA_Conf_Delivery_Date'].fillna(method='ffill')
+        canon_merged['TPO_LA_Conf_Delivery_Date'] = \
+            canon_merged.groupby(
+                ['TPO_Requested_Delivery_Date', 
+                 'MPA Site', 'BU',
+                 'TPO_PO_Vendor_Name', 'Trade_PO', 'TPO_Material',
+                 'REGION', 'Sub_Region',
+                 'DC_IC_PO_Plant'])['TPO_LA_Conf_Delivery_Date'].fillna(method='bfill')
     
     
     

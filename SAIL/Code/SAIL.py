@@ -641,9 +641,12 @@ TPO_Canon_Eng_Final['TPO_REF'] = TPO_Canon_Eng_Final['TPO_LA_REFERENCE'].str[:2]
 TPO_Canon_Eng_Final['MPa'] = TPO_Canon_Eng_Final['TPO_REF'].map(canon_site_dict)
 TPO_Canon_Eng_Final = TPO_Canon_Eng_Final.drop(columns=['TPO_REF'])
 
-# REMOVE DALIAN
+# REMOVE DALIAN AND NO MAPPING OF LA_REF
 TPO_Canon_Eng_Final = TPO_Canon_Eng_Final.loc[
-    TPO_Canon_Eng_Final['MPa'] != 'Canon CN, Dalian'].copy()
+    (TPO_Canon_Eng_Final['MPa'] != 'Canon CN, Dalian') & 
+    (TPO_Canon_Eng_Final['MPa'].notnull())].copy()
+
+
 
 # %% FULL SHIPMENT DATA
 
