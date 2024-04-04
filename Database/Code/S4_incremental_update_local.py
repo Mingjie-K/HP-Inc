@@ -14,7 +14,7 @@ from sqlalchemy import text
 import os
 user = os.getenv('USERPROFILE')
 code_path = os.path.join(user, 
-                         'OneDrive - HP Inc/Projects/Mansred Database/Code')
+                         'OneDrive - HP Inc/Projects/Database/Code')
 os.chdir(code_path)
 import credentials
 import db_func as dbf
@@ -30,7 +30,7 @@ today_weekday = today.weekday()
 today_str = today.strftime('%Y-%m-%d %H:%M:%S')
 
 # %% Connection to Database
-engine = dbf.sql_connect(credentials.connection(), 'Mansred')
+engine = credentials.connection()
 # %% S4
 # =============================================================================
 # Factory Report
@@ -219,7 +219,7 @@ except:
     pass
 # Update data
 feather_path = os.path.join(user, 
-                            'OneDrive - HP Inc\Projects\Mansred Database\Data',
+                            'OneDrive - HP Inc\Projects\Database\Data',
                             'Feather')
 os.chdir(feather_path)
 
