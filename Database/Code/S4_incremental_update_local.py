@@ -17,7 +17,6 @@ code_path = os.path.join(user,
                          'OneDrive - HP Inc/Projects/Database/Code')
 os.chdir(code_path)
 import credentials
-import db_func as dbf
 pd.set_option('display.max.columns', None)
 
 # Set today for updated date
@@ -31,6 +30,18 @@ today_str = today.strftime('%Y-%m-%d %H:%M:%S')
 
 # %% Connection to Database
 engine = credentials.connection()
+
+def db_insertdata(df, table, engine, col_dtype, if_exist):
+    try:
+        df.to_sql(table,
+                  engine,
+                  if_exists=if_exist,
+                  chunksize=None,
+                  index=False,
+                  dtype=col_dtype)
+        print('Insertion of data to Database table {} SUCCEEDED!'.format(table))
+    except:
+        print('Insertion of data to Database table {} FAILED!'.format(table))
 # %% S4
 # =============================================================================
 # Factory Report
@@ -213,10 +224,10 @@ try:
             conn.execute(text(drop_query))
             conn.execute(text("COMMIT"))
         # engine.execute(drop_query)
-        dbf.db_appenddata(get_fac, 'fac_report', engine, fac_df_dtype)
+        db_insertdata(get_fac, 'fac_report', engine, fac_df_dtype, 'append')
         print(vendor + ' Factory Report updated in database')
 except:
-    pass
+    print('Insertion of data to fac_report table FAILED!')
 # Update data
 feather_path = os.path.join(user, 
                             'OneDrive - HP Inc\Projects\Database\Data',
