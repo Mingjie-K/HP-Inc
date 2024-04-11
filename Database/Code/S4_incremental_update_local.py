@@ -264,4 +264,4 @@ try:
         conn.execute(text(update_query))
         conn.execute(text("COMMIT"))
 except:
-    pass
+    print('Table update for fac_report FAILED!')
