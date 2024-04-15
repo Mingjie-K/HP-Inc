@@ -27,3 +27,20 @@ Database/Data/Feather/Archive/canon_ffgi_vn_por_build_plan.feather.zstd
 Database/Data/Feather/Archive/canon_ffgi_vn_skus.feather.zstd
 Database/Data/Feather/Archive/canon_ffgi_zs_por_build_plan.feather.zstd
 Database/Data/Feather/Archive/canon_ffgi_zs_skus.feather.zstd
+Database/Data/Feather/business_family.feather.zstd
+Database/Data/Feather/canon_eng_por_build_plan.feather.zstd
+Database/Data/Feather/canon_eng_skus.feather.zstd
+Database/Data/Feather/canon_etd.feather.zstd
+Database/Data/Feather/canon_ffgi_por_build_plan.feather.zstd
+Database/Data/Feather/canon_ffgi_skus.feather.zstd
+Database/Data/Feather/canon_site.feather.zstd
+Database/Data/Feather/exe_family.feather.zstd
+Database/Data/Feather/factory_report.feather.zstd
+Database/Data/Feather/fxnwhl_pc.feather.zstd
+Database/Data/Feather/ink_por_build_plan.feather.zstd
+Database/Data/Feather/ink_skus.feather.zstd
+Database/Data/Feather/laser_por_build_plan.feather.zstd
+Database/Data/Feather/laser_skus.feather.zstd
+Database/Data/Feather/plant.feather.zstd
+Database/Data/Feather/vendor.feather.zstd
+Database/ISAAC/ISAAC - MANSRED.xlsx
