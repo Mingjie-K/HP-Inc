@@ -247,5 +247,6 @@ try:
     with aws_engine.connect() as conn:
         conn.execute(text(update_query))
         conn.execute(text("COMMIT"))
+        print('Table update for fac_report SUCCEEDED!')
 except:
     print('Table update for fac_report FAILED!')
