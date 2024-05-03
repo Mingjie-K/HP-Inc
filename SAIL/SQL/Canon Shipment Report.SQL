@@ -1,0 +1,52 @@
+SELECT	
+"Trade_PO",
+"TPO_LA_Line" AS TRADE_PO_LINE,
+"CDO_IC_PO",
+"DC_IC_PO",
+"TPO_LA_Line" AS DC_IC_PO_LINE,
+"TPO_PO_Vendor_Code",
+"TPO_Created_On",
+"TPO_Material",
+"TPO_Qty",
+"TPO_Requested_Delivery_Date",
+"TPO_Plant",
+"TPO_Shipping_Point",
+"TPO_PO_Type",
+"TPO_AB_Line",
+"TPO_AB_Conf_Delivery_Date",
+"TPO_AB_Qty",
+"TPO_LA_Conf_Delivery_Date",
+"TPO_LA_Inbound_Delivery_No",
+"TPO_LA_Qty",
+"TPO_LA_Reference",
+"Trade_PO_Open_Quantity",
+"DC_IC_PO_Req_Delivery_Date",
+"DC_IC_PO_Qty",
+"DC_IC_PO_Plant",
+"CDO_IC_PO_Req_Delivery_Date",
+"CDO_IC_PO_Plant",
+"DC_IC_PO_Requisitioner",
+"CDO_IC_PO_Requisitioner",
+"Requisitioner",
+TPOLATABLE.VBELN AS TPOLATABLE_DELIVERY_NR,
+TPOLATABLE.ZZ_DC_DATE AS TPOLATABLE_IBP_ETA_DC,
+TPOLATABLE.ZZ_DEP_DATE AS TPOLATABLE_IBP_ETD_FACTORY,
+TPOLATABLE.ZZ_ARRIVE_DT AS TPOLATABLE_IBD_PORT_ARRIVAL_DT,
+TPOLATABLE.BOLNR AS TPOLATABLE_BILL_LADING,
+TPOLATABLE.TRAID AS TPOLATABLE_MNS_OF_TRANS_ID
+
+FROM "_SYS_BIC"."HP_ERP.Personal-Systems.Data-Mart.PTP/CV_S_D01_PURCHASE_ORDER_PRINT_FACTORY"(
+'PLACEHOLDER' = ('$$IP_TPO_DT_FROM$$','20210701'),
+'PLACEHOLDER' = ('$$IP_TPO_DT_TO$$', '20241231'),
+'PLACEHOLDER' = ('$$IP_TPO_PO_TYPE$$', '''ZOCM''')) 
+
+LEFT OUTER JOIN S4SLT.LIKP AS TPOLATABLE
+ON "TPO_LA_Inbound_Delivery_No" = TPOLATABLE.VBELN 
+ 
+WHERE "TPO_PO_Vendor_Code"
+IN (
+'0100006576',
+'0100016670',
+'0100016915',
+'0100000786'
+)
