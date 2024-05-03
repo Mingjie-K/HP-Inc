@@ -30,6 +30,7 @@ today_str = today.strftime('%Y-%m-%d %H:%M:%S')
 
 # %% Connection to Database
 engine = credentials.connection()
+aws_engine = credentials.aws_connection()
 
 
 def db_insertdata(df, table, engine, col_dtype, if_exist):
@@ -169,6 +170,12 @@ fac_df_dtype = {'TPO_PO_Vendor_Code': sa.types.VARCHAR(),
                 'DC_IC_PO_Req_Delivery_Date': sa.types.Date,
                 'CDO_IC_PO_Req_Delivery_Date': sa.types.Date
                 }
+# os.chdir(r'C:\Users\kohm\Downloads\RP-ERPODW-INC-Factory Purchase Order Report_V2 (37)')
+# df = pd.read_csv('Factory Purchase Order Report.csv',
+#                      dtype=fac_data_type, parse_dates=dates,
+#                      date_format='%m/%d/%y',
+#                      skiprows=3, thousands=',')
+# db_insertdata(df, 'fac_report', aws_engine, fac_df_dtype, 'append')
 
 
 def read_csv_s4(mpa_str):
