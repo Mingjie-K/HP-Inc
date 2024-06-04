@@ -123,3 +123,14 @@ Database/Code/credentials.py
 Database/Code/ISAAC.ipynb
 MSP Alert/Documentation/LT CHECK.xlsx
 MSP Alert/Documentation/UAT Template - Analytics.xlsx
+Database/AWS Data Check with Old SAIL/Check.csv
+Database/AWS Data Check with Old SAIL/fxncz_jcuu_correct.xlsx
+Database/AWS Data Check with Old SAIL/Inkjet SQL_Shipment_18_April.xlsx
+Database/AWS Data Check with Old SAIL/Inkjet_Shipment.csv
+Database/AWS Data Check with Old SAIL/laser_month.csv
+Database/AWS Data Check with Old SAIL/pcc_check.xlsx
+Database/AWS Data Check with Old SAIL/Shipment.csv
+Database/Code/Archive/Cleanup Backup Code.py
+Database/Code/Archive/ISAAC_incremental_update_old.py
+Database/Code/Archive/sql.bat
+Database/Code/Archive/sql.yml
