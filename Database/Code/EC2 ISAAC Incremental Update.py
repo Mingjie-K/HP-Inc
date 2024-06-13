@@ -11,16 +11,8 @@ import sqlalchemy as sa
 from sqlalchemy import text
 import os
 user = os.getenv('USERPROFILE')
-code_path = os.path.join(user,
-                         'OneDrive - HP Inc/Projects/Database/Code')
-os.chdir(code_path)
 import credentials  # nopep8
 pd.set_option('display.max.columns', None)
-
-# Set data path
-feather_path = os.path.join(user,
-                            'OneDrive - HP Inc\Projects\Database\Data',
-                            'Feather')
 
 # Set today for updated date
 today = datetime.today()
