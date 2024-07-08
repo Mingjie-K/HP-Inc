@@ -116,7 +116,7 @@ def duplicated_tpo_clean(df):
          'Trade_PO_Open_Qty_Value',
          'Trade_PO_Status',
          'IC_SO_To_Factory_Ship_To_Name']),
-        ['TPO_Qty', 'TPO_Total_Net_Price', 'TPO_Net_Price',
+        ['TPO_Qty', 'TPO_Total_Net_Price', 
             'Trade_PO_Total_Net_Price_Value',
          'Trade_PO_Open_Quantity',
          'Trade_PO_Open_Qty_Value']] = np.nan
